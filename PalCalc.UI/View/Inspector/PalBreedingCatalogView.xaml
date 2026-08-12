@@ -269,7 +269,7 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
                                             <TextBlock Text="{Binding DisplayName.Value}" FontWeight="SemiBold" />
-                                            <TextBlock Text="{Binding LocationDescription.Value, TargetNullValue={itl:LocalizedText LC_BREEDING_LOCATION_UNKNOWN}}" FontSize="11" Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                                            <TextBlock Text="{Binding LocationDescription.Value}" FontSize="11" Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
                                             <TextBlock Text="{itl:LocalizedText LC_BREEDING_ON_EXPEDITION}"
                                                        Visibility="{Binding IsOnExpedition, Converter={StaticResource VVC}}"
                                                        Foreground="{StaticResource SameGenderBrush}" FontSize="10" FontWeight="Bold" />
@@ -366,13 +366,13 @@
                                                                     <StackPanel Grid.Column="0">
                                                                         <TextBlock Text="{Binding Parent1Instance.DisplayName.Value}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                                                         <TextBlock Text="{Binding Parent1Instance.Gender.Value}" FontSize="10" />
-                                                                        <TextBlock Text="{Binding Parent1Instance.LocationDescription.Value, TargetNullValue={itl:LocalizedText LC_BREEDING_LOCATION_UNKNOWN}}" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                                                        <TextBlock Text="{Binding Parent1Instance.LocationDescription.Value}" FontSize="10" TextTrimming="CharacterEllipsis" />
                                                                     </StackPanel>
                                                                     <TextBlock Grid.Column="1" Text=" ↔ " FontSize="10" />
                                                                     <StackPanel Grid.Column="2">
                                                                         <TextBlock Text="{Binding Parent2Instance.DisplayName.Value}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                                                         <TextBlock Text="{Binding Parent2Instance.Gender.Value}" FontSize="10" />
-                                                                        <TextBlock Text="{Binding Parent2Instance.LocationDescription.Value, TargetNullValue={itl:LocalizedText LC_BREEDING_LOCATION_UNKNOWN}}" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                                                        <TextBlock Text="{Binding Parent2Instance.LocationDescription.Value}" FontSize="10" TextTrimming="CharacterEllipsis" />
                                                                     </StackPanel>
                                                                 </Grid>
                                                                 <TextBlock Visibility="{Binding HasExpeditionParent, Converter={StaticResource VVC}}"

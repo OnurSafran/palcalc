@@ -396,6 +396,70 @@ To enhance user experience and seamlessly integrate this feature into PalCalc's 
 - **Separate compact readiness from pair enumeration**:
   - The UI creates detailed recipe view models only for the selected Pal, but the calculator still computes exact pair counts and capped pair samples for the whole catalog. Split these paths if profiling shows meaningful startup cost.
 
+## Next step: make Pal Catalog the Pal information hub
+
+The Pal Catalog/Breeding UI should become the single entry point for Pal-focused workflows instead of being another tab inside Save Inspector. Keep raw save inspection in `Inspect`, but move the Pal catalog and its related views into a dedicated Pal hub with separate tabs.
+
+### Proposed navigation
+
+Use a dedicated `Pal Catalog`/`Pals` page or window with these tabs:
+
+1. **Catalog**
+   - Complete PalDex-ordered catalog, variants, search, filters, sorting, icons, ownership counts, and readiness markers.
+2. **Breeding**
+   - Selected-Pal breeding details, all recipes, owned-parent availability, exact matching pairs, locations, expedition warnings, and the future `Send to Solver` action.
+3. **Work suitability**
+   - Work suitability levels for the selected Pal or a filterable comparison grid across all Pals.
+   - Support filtering by work type and minimum level, such as `Mining >= 3` or `Transporting >= 4`.
+   - Show the work-type name and numeric level as text; icons and color may supplement but must not be the only signal.
+4. **Owned / locations**
+   - Optional follow-up tab for save-owned instances, locations, gender, levels, expedition state, and filters. This can reuse the existing Search/Details view models where practical rather than duplicating raw save inspection.
+
+The selected Pal, search text, filter, sort, and save scope should be shared across the Catalog, Breeding, and Work suitability tabs. Selecting a Pal in Catalog should make the same Pal active when switching to Breeding or Work suitability. The hub must continue to operate against the selected save for ownership and breeding state, while static Pal data remains available even when no save is loaded.
+
+### Existing work-suitability data
+
+The model already contains static work-suitability data on [`Pal.WorkSuitability`](../PalCalc.Model/Pal.cs), represented as `Dictionary<WorkType, int>`. The current `WorkType` enum includes:
+
+- Kindling
+- Watering
+- Planting
+- Generate Electricity
+- Handiwork
+- Gathering
+- Lumbering
+- Mining
+- Medicine Production
+- Cooling
+- Transporting
+- Farming
+
+The embedded `PalCalc.Model/db.json` contains these values under each Pal's `WorkSuitability` object. This is enough for a first Work suitability tab showing database capability and level. Some entries may have a null or incomplete dictionary, so the UI should display `Unknown`/`No data` rather than treating missing values as level zero without disclosure.
+
+Static suitability is not the same as current save availability. The first version should distinguish:
+
+- **Capability:** what the database says the Pal can do and at what level.
+- **Owned availability:** whether the selected save contains an instance of that Pal.
+- **Current assignment/state:** whether an owned instance is currently working, idle, boxed, or otherwise available; add this only when the save model exposes it reliably.
+
+### Recommended implementation order
+
+1. Extract the current `PalBreedingCatalogView` into a reusable Pal hub shell and preserve its calculator/view models.
+2. Move the existing Catalog and Breeding content into separate hub tabs with shared selected-Pal state.
+3. Add a static `WorkSuitabilityViewModel` over `Pal.WorkSuitability` and a localized `WorkType` display mapping.
+4. Add work-type/minimum-level filters and a compact comparison view; defer complex ranking until the data and UX are validated.
+5. Add save-owned counts and locations to the Work suitability view, clearly labeling them as save-specific.
+6. Remove the Pal Catalog tab from Save Inspector after the new hub is working, or leave a short `Open Pal Catalog` link there during transition.
+
+### Acceptance criteria for the hub
+
+- Users can reach Catalog, Breeding, and Work suitability from one Pal-focused entry point.
+- A Pal selected in one tab remains selected in the others.
+- Breeding availability still uses the selected save and its resolved scope.
+- Work suitability renders static database levels without requiring a save.
+- Missing work-suitability data is explicit and does not crash XAML binding.
+- Existing Search and Details inspection workflows remain available from Inspect.
+
 ## MVP Implementation Notes
 
 The MVP feature has been implemented as specified in this document:

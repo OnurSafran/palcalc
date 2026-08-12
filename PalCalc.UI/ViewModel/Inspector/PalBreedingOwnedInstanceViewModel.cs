@@ -17,10 +17,9 @@ namespace PalCalc.UI.ViewModel.Inspector
             Level = instance.Level;
             IsOnExpedition = instance.IsOnExpedition;
 
-            if (instance.Location != null)
-            {
-                LocationDescription = FormatLocation(settings ?? GameSettings.Defaults, instance.Location);
-            }
+            LocationDescription = instance.Location != null
+                ? FormatLocation(settings ?? GameSettings.Defaults, instance.Location)
+                : LocalizationCodes.LC_BREEDING_LOCATION_UNKNOWN.Bind();
         }
 
         private static ILocalizedText FormatLocation(GameSettings settings, PalLocation location)
