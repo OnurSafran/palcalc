@@ -21,6 +21,16 @@ namespace PalCalc.Model
         Unknown
     }
 
+    public enum RecipeMissingReason
+    {
+        None,
+        MissingParent1,
+        MissingParent2,
+        MissingBothParents,
+        MissingGenderPair,
+        OnlyExpeditionParentsAvailable
+    }
+
     public class OwnedPalGenderCounts
     {
         public int Total { get; set; }
@@ -44,8 +54,10 @@ namespace PalCalc.Model
     {
         public BreedingResult Recipe { get; set; }
         public RecipeAvailabilityStatus Status { get; set; }
+        public RecipeMissingReason MissingReason { get; set; }
         public List<PalBreedingPairResult> MatchingPairs { get; set; } = new List<PalBreedingPairResult>();
         public int MatchingPairCount { get; set; }
+        public bool HasNonExpeditionMatchingPair { get; set; }
         public bool HasMoreMatchingPairs => MatchingPairCount > MatchingPairs.Count;
         public OwnedPalGenderCounts Parent1Counts { get; set; }
         public OwnedPalGenderCounts Parent2Counts { get; set; }
@@ -167,6 +179,8 @@ namespace PalCalc.Model
                                                HasSuitableParent(recipe.Parent2, p2Instances);
 
                     RecipeAvailabilityStatus recipeStatus;
+                    RecipeMissingReason missingReason = RecipeMissingReason.None;
+
                     if (!ownedDataIsKnown)
                     {
                         recipeStatus = RecipeAvailabilityStatus.Unknown;
@@ -174,26 +188,47 @@ namespace PalCalc.Model
                     else if (pairSearch.Count > 0)
                     {
                         recipeStatus = RecipeAvailabilityStatus.BothParentsOwned;
+                        if (!pairSearch.HasNonExpeditionPair)
+                        {
+                            missingReason = RecipeMissingReason.OnlyExpeditionParentsAvailable;
+                        }
                     }
                     else if (hasBothSuitableParents)
                     {
                         recipeStatus = RecipeAvailabilityStatus.IncompatibleParentsOwned;
+                        missingReason = RecipeMissingReason.MissingGenderPair;
                     }
                     else if (hasOneSuitableParent)
                     {
                         recipeStatus = RecipeAvailabilityStatus.OneParentOwned;
+                        if (p1Counts.Total == 0 && p2Counts.Total > 0)
+                            missingReason = RecipeMissingReason.MissingParent1;
+                        else if (p2Counts.Total == 0 && p1Counts.Total > 0)
+                            missingReason = RecipeMissingReason.MissingParent2;
+                        else
+                            missingReason = RecipeMissingReason.MissingGenderPair;
                     }
                     else
                     {
                         recipeStatus = RecipeAvailabilityStatus.NeitherParentOwned;
+                        if (p1Counts.Total == 0 && p2Counts.Total == 0)
+                            missingReason = RecipeMissingReason.MissingBothParents;
+                        else if (p1Counts.Total == 0)
+                            missingReason = RecipeMissingReason.MissingParent1;
+                        else if (p2Counts.Total == 0)
+                            missingReason = RecipeMissingReason.MissingParent2;
+                        else
+                            missingReason = RecipeMissingReason.MissingGenderPair;
                     }
 
                     recipeResults.Add(new RecipeMatchResult
                     {
                         Recipe = recipe,
                         Status = recipeStatus,
+                        MissingReason = missingReason,
                         MatchingPairs = pairSearch.Pairs,
                         MatchingPairCount = pairSearch.Count,
+                        HasNonExpeditionMatchingPair = pairSearch.HasNonExpeditionPair,
                         Parent1Counts = p1Counts,
                         Parent2Counts = p2Counts
                     });
@@ -237,7 +272,7 @@ namespace PalCalc.Model
                  requiredParent.Gender == instance.Gender)
             );
 
-        private static (List<PalBreedingPairResult> Pairs, int Count) FindMatchingPairs(
+        private static (List<PalBreedingPairResult> Pairs, int Count, bool HasNonExpeditionPair) FindMatchingPairs(
             BreedingResult recipe,
             List<PalInstance> p1Instances,
             List<PalInstance> p2Instances
@@ -246,6 +281,7 @@ namespace PalCalc.Model
             var pairList = new List<PalBreedingPairResult>();
             var seenPairKeys = new HashSet<string>();
             var pairCount = 0;
+            var hasNonExpeditionPair = false;
 
             foreach (var inst1 in p1Instances)
             {
@@ -277,6 +313,9 @@ namespace PalCalc.Model
                     if (seenPairKeys.Add(pairKey))
                     {
                         pairCount++;
+                        if (!inst1.IsOnExpedition && !inst2.IsOnExpedition)
+                            hasNonExpeditionPair = true;
+
                         if (pairList.Count < MaxDisplayedPairsPerRecipe)
                         {
                             pairList.Add(new PalBreedingPairResult
@@ -289,7 +328,7 @@ namespace PalCalc.Model
                 }
             }
 
-            return (pairList, pairCount);
+            return (pairList, pairCount, hasNonExpeditionPair);
         }
     }
 }

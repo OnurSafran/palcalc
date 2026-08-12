@@ -1102,6 +1102,12 @@
   <data name="LC_WORKSUITABILITY_LEVEL" xml:space="preserve">
     <value>Level</value>
   </data>
+  <data name="LC_WORKSUITABILITY_FILTER_TYPE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_WORKSUITABILITY_FILTER_MIN_LEVEL" xml:space="preserve">
+    <value />
+  </data>
   <data name="LC_WORKTYPE_KINDLING" xml:space="preserve">
     <value />
   </data>
@@ -1136,6 +1142,21 @@
     <value />
   </data>
   <data name="LC_WORKTYPE_FARMING" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_BREEDING_MISSING_BOTH" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_BREEDING_MISSING_PARENT1" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_BREEDING_MISSING_PARENT2" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_BREEDING_MISSING_GENDER" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_BREEDING_EXPEDITION_ONLY" xml:space="preserve">
     <value />
   </data>
 </root>

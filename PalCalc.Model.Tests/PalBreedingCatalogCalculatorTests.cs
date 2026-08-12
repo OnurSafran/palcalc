@@ -288,5 +288,40 @@ namespace PalCalc.Model.Tests
             Assert.AreEqual(PalBreedingCatalogCalculator.MaxDisplayedPairsPerRecipe, recipeResult.MatchingPairs.Count);
             Assert.IsTrue(recipeResult.HasMoreMatchingPairs);
         }
+
+        [TestMethod]
+        public void CalculateCatalog_DoesNotCallRecipeExpeditionOnlyWhenLaterPairIsAvailable()
+        {
+            var cattiva = paldb.Pals.First(p => p.Name == "Cattiva");
+            var chikipi = paldb.Pals.First(p => p.Name == "Chikipi");
+            var recipe = breedingdb.Breeding.First(b => b.Parents.Any(p => p.Pal == cattiva) && b.Parents.Any(p => p.Pal == chikipi));
+            var owned = Enumerable.Range(0, 100)
+                .Select(i => new PalInstance
+                {
+                    InstanceId = $"cat_expedition_{i}",
+                    Pal = cattiva,
+                    Gender = PalGender.MALE,
+                    IsOnExpedition = true
+                })
+                .Append(new PalInstance
+                {
+                    InstanceId = "cat_available",
+                    Pal = cattiva,
+                    Gender = PalGender.MALE
+                })
+                .Append(new PalInstance
+                {
+                    InstanceId = "chik_available",
+                    Pal = chikipi,
+                    Gender = PalGender.FEMALE
+                });
+
+            var recipeResult = PalBreedingCatalogCalculator.CalculateCatalog(owned, paldb, breedingdb)
+                .Single(r => r.ChildPal == recipe.Child)
+                .Recipes.Single(r => r.Recipe == recipe);
+
+            Assert.IsTrue(recipeResult.HasNonExpeditionMatchingPair);
+            Assert.AreNotEqual(RecipeMissingReason.OnlyExpeditionParentsAvailable, recipeResult.MissingReason);
+        }
     }
 }

@@ -12,10 +12,6 @@
              d:DataContext="{x:Static vm:PalBreedingCatalogViewModel.DesignerInstance}">
     
     <UserControl.Resources>
-        <!-- Status Color Brushes -->
-        <SolidColorBrush x:Key="ReadyBrush" Color="#2E7D32" />
-        <SolidColorBrush x:Key="MissingPairBrush" Color="#D84315" />
-        <SolidColorBrush x:Key="UnavailableBrush" Color="#757575" />
     </UserControl.Resources>
 
     <Grid>
@@ -94,13 +90,13 @@
                                             <Style TargetType="TextBlock">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.Ready}">
-                                                        <Setter Property="Foreground" Value="{StaticResource ReadyBrush}" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.SuccessBrush}}" />
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.MissingPair}">
-                                                        <Setter Property="Foreground" Value="{StaticResource MissingPairBrush}" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.ErrorBrush}}" />
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.Unavailable}">
-                                                        <Setter Property="Foreground" Value="{StaticResource UnavailableBrush}" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -163,13 +159,13 @@
                                         <Style TargetType="TextBlock">
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.Ready}">
-                                                    <Setter Property="Foreground" Value="{StaticResource ReadyBrush}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.SuccessBrush}}" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.MissingPair}">
-                                                    <Setter Property="Foreground" Value="{StaticResource MissingPairBrush}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.ErrorBrush}}" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.Unavailable}">
-                                                    <Setter Property="Foreground" Value="{StaticResource UnavailableBrush}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>

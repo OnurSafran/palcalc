@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using PalCalc.Model;
 using PalCalc.SaveReader;
 using PalCalc.SaveReader.SaveFile;
@@ -31,40 +31,40 @@ namespace PalCalc.UI.Model
         }
 
         [JsonProperty]
-        public DateTime LastModified { get; private set; }
+        public DateTime LastModified { get; internal set; }
 
         [JsonProperty]
-        public bool IsServerSave { get; private set; }
+        public bool IsServerSave { get; internal set; }
 
         [JsonProperty]
-        public string WorldName { get; private set; }
+        public string WorldName { get; internal set; }
         [JsonProperty]
-        public string PlayerName { get; private set; }
+        public string PlayerName { get; internal set; }
         [JsonProperty]
-        public int? PlayerLevel { get; private set; }
+        public int? PlayerLevel { get; internal set; }
         [JsonProperty]
-        public int InGameDay { get; private set; }
+        public int InGameDay { get; internal set; }
 
         [JsonProperty]
-        public string DatabaseVersion { get; private set; }
+        public string DatabaseVersion { get; internal set; }
         [JsonProperty]
-        public string ReaderVersion { get; private set; }
+        public string ReaderVersion { get; internal set; }
 
         [JsonProperty]
-        public List<PlayerInstance> Players { get; private set; }
+        public List<PlayerInstance> Players { get; internal set; }
         [JsonProperty]
-        public List<GuildInstance> Guilds { get; private set; }
+        public List<GuildInstance> Guilds { get; internal set; }
         [JsonProperty]
-        public List<PalInstance> OwnedPals { get; private set; }
+        public List<PalInstance> OwnedPals { get; internal set; }
 
         // note: `OwnedPals` is the primary source of pal info, `Bases` and `PalContainers` are
         //       just used for supplemental info like which bases belong to which guild, which
         //       viewing cages belong to bases, world coordinates of bases, etc.
 
         [JsonProperty]
-        public List<BaseInstance> Bases { get; private set; }
+        public List<BaseInstance> Bases { get; internal set; }
         [JsonProperty]
-        public List<IPalContainer> PalContainers { get; private set; }
+        public List<IPalContainer> PalContainers { get; internal set; }
 
         // (more accurate name would be "NumRefreshes")
         [JsonIgnore]

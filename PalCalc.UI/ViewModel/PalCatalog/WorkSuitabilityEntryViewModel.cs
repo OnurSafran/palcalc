@@ -20,7 +20,7 @@ namespace PalCalc.UI.ViewModel.PalCatalog
         public ILocalizedText TypeName { get; }
         public ILocalizedText LevelDisplay { get; }
 
-        private static ILocalizedText GetTypeName(WorkType type) => type switch
+        public static ILocalizedText GetTypeName(WorkType type) => type switch
         {
             WorkType.Kindling => LocalizationCodes.LC_WORKTYPE_KINDLING.Bind(),
             WorkType.Watering => LocalizationCodes.LC_WORKTYPE_WATERING.Bind(),

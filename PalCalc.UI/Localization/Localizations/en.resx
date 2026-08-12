@@ -1170,6 +1170,12 @@ When connecting to another person's multiplayer world, Palworld does not downloa
   <data name="LC_WORKSUITABILITY_LEVEL" xml:space="preserve">
     <value>Lv. {Level}</value>
   </data>
+  <data name="LC_WORKSUITABILITY_FILTER_TYPE" xml:space="preserve">
+    <value>Work type</value>
+  </data>
+  <data name="LC_WORKSUITABILITY_FILTER_MIN_LEVEL" xml:space="preserve">
+    <value>Minimum level</value>
+  </data>
   <data name="LC_WORKTYPE_KINDLING" xml:space="preserve">
     <value>Kindling</value>
   </data>
@@ -1205,5 +1211,20 @@ When connecting to another person's multiplayer world, Palworld does not downloa
   </data>
   <data name="LC_WORKTYPE_FARMING" xml:space="preserve">
     <value>Farming</value>
+  </data>
+  <data name="LC_BREEDING_MISSING_BOTH" xml:space="preserve">
+    <value>Missing both parent species</value>
+  </data>
+  <data name="LC_BREEDING_MISSING_PARENT1" xml:space="preserve">
+    <value>Missing parent: {Parent}</value>
+  </data>
+  <data name="LC_BREEDING_MISSING_PARENT2" xml:space="preserve">
+    <value>Missing parent: {Parent}</value>
+  </data>
+  <data name="LC_BREEDING_MISSING_GENDER" xml:space="preserve">
+    <value>Both parents owned, but no compatible male/female pair</value>
+  </data>
+  <data name="LC_BREEDING_EXPEDITION_ONLY" xml:space="preserve">
+    <value>Matching pair owned, but parents are currently on expedition</value>
   </data>
 </root>

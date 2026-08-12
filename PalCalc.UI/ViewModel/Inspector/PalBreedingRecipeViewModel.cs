@@ -56,12 +56,27 @@ namespace PalCalc.UI.ViewModel.Inspector
             DisplayedPairsNotice = LocalizationCodes.LC_BREEDING_PAIRS_TRUNCATED.Bind(
                 new { Count = MatchingPairs.Count }
             );
+
+            MissingReason = matchResult.MissingReason;
+            MissingReasonNote = MissingReason switch
+            {
+                RecipeMissingReason.MissingBothParents => LocalizationCodes.LC_BREEDING_MISSING_BOTH.Bind(),
+                RecipeMissingReason.MissingParent1 => LocalizationCodes.LC_BREEDING_MISSING_PARENT1.Bind(new { Parent = Parent1.Name.Value }),
+                RecipeMissingReason.MissingParent2 => LocalizationCodes.LC_BREEDING_MISSING_PARENT2.Bind(new { Parent = Parent2.Name.Value }),
+                RecipeMissingReason.MissingGenderPair => LocalizationCodes.LC_BREEDING_MISSING_GENDER.Bind(),
+                RecipeMissingReason.OnlyExpeditionParentsAvailable => LocalizationCodes.LC_BREEDING_EXPEDITION_ONLY.Bind(),
+                _ => null
+            };
+            HasMissingReasonNote = MissingReasonNote != null;
         }
 
         public BreedingResult Recipe { get; }
         public PalViewModel Parent1 { get; }
         public PalViewModel Parent2 { get; }
         public RecipeAvailabilityStatus Status { get; }
+        public RecipeMissingReason MissingReason { get; }
+        public ILocalizedText MissingReasonNote { get; }
+        public bool HasMissingReasonNote { get; }
         public ILocalizedText StatusText { get; }
         public ILocalizedText Parent1CountsDisplay { get; }
         public ILocalizedText Parent2CountsDisplay { get; }

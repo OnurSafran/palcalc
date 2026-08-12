@@ -11,6 +11,7 @@ Status: **MVP code complete; Windows release validation remains.**
 - A virtualized icon grid with localized names, PalDex numbers, owned counts, readiness text, tooltips, keyboard selection, search, filters, and sorting.
 - A selected-Pal detail pane containing owned instances, gender and location information, expedition warnings, every breeding recipe, per-recipe availability, and expandable matching instance pairs.
 - Work suitability in the same selected-Pal detail pane, showing each positive work type and level without requiring a second Pal-selection workflow.
+- Work suitability comparison filters by work type and minimum level, with save-owned counts in comparison results.
 - A pure model-layer calculator that:
   - accepts only concrete `MALE`/`FEMALE` owned-parent genders;
   - requires opposite genders and distinct non-empty instance IDs;
@@ -18,6 +19,7 @@ Status: **MVP code complete; Windows release validation remains.**
   - deduplicates repeated instance references and canonicalizes instance pairs;
   - reports malformed, conflicting, or unknown save records as `Unknown`;
   - retains exact pair counts while limiting displayed pairs to the first 100 per recipe.
+- Recipe detail explanations for missing parent species, incompatible genders, and expedition-only matching pairs.
 - Single-player scope across all parsed owned-Pal locations, including expeditions.
 - Server scope using the selected player's guild and shared containers when resolvable, with a direct-player fallback when the guild is unavailable and an explicit unknown scope when the selected player cannot be resolved.
 - In-memory, per-save state for search, filter, sort, and selection.

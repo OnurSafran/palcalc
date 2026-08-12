@@ -1066,6 +1066,12 @@ Daha yüksek değerler, gereken süre üzerinde minimum etkiye sahiptir..</value
   <data name="LC_WORKSUITABILITY_LEVEL" xml:space="preserve">
     <value>Seviye {Level}</value>
   </data>
+  <data name="LC_WORKSUITABILITY_FILTER_TYPE" xml:space="preserve">
+    <value>İş türü</value>
+  </data>
+  <data name="LC_WORKSUITABILITY_FILTER_MIN_LEVEL" xml:space="preserve">
+    <value>Minimum seviye</value>
+  </data>
   <data name="LC_WORKTYPE_KINDLING" xml:space="preserve">
     <value>Ateş Yakma</value>
   </data>
@@ -1101,5 +1107,20 @@ Daha yüksek değerler, gereken süre üzerinde minimum etkiye sahiptir..</value
   </data>
   <data name="LC_WORKTYPE_FARMING" xml:space="preserve">
     <value>Çiftçilik</value>
+  </data>
+  <data name="LC_BREEDING_MISSING_BOTH" xml:space="preserve">
+    <value>İki ebeveyn türü de eksik</value>
+  </data>
+  <data name="LC_BREEDING_MISSING_PARENT1" xml:space="preserve">
+    <value>Eksik ebeveyn: {Parent}</value>
+  </data>
+  <data name="LC_BREEDING_MISSING_PARENT2" xml:space="preserve">
+    <value>Eksik ebeveyn: {Parent}</value>
+  </data>
+  <data name="LC_BREEDING_MISSING_GENDER" xml:space="preserve">
+    <value>İki ebeveyn de mevcut, ancak uyumlu erkek/dişi çift yok</value>
+  </data>
+  <data name="LC_BREEDING_EXPEDITION_ONLY" xml:space="preserve">
+    <value>Eşleşen çift mevcut, ancak ebeveynler keşif gezisinde</value>
   </data>
 </root>

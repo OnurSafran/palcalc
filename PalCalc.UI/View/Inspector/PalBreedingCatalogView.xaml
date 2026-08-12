@@ -20,12 +20,6 @@
         <c:ValueVisibilityConverter x:Key="VVC" />
         <c:ValueVisibilityConverter x:Key="VVC_Negate" Negate="True" />
 
-        <!-- Status Color Brushes -->
-        <SolidColorBrush x:Key="ReadyBrush" Color="#2E7D32" />
-        <SolidColorBrush x:Key="MissingPairBrush" Color="#D84315" />
-        <SolidColorBrush x:Key="UnavailableBrush" Color="#757575" />
-        <SolidColorBrush x:Key="SameGenderBrush" Color="#F57F17" />
-        <SolidColorBrush x:Key="OneParentBrush" Color="#0277BD" />
     </UserControl.Resources>
 
     <Grid Margin="4">
@@ -77,13 +71,13 @@
                                     <Style TargetType="TextBlock">
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.Ready}">
-                                                <Setter Property="Foreground" Value="{StaticResource ReadyBrush}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.SuccessBrush}}" />
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.MissingPair}">
-                                                <Setter Property="Foreground" Value="{StaticResource MissingPairBrush}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.ErrorBrush}}" />
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.Unavailable}">
-                                                <Setter Property="Foreground" Value="{StaticResource UnavailableBrush}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -111,7 +105,7 @@
                                             <TextBlock Text="{Binding LocationDescription.Value}" FontSize="11" Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
                                             <TextBlock Text="{itl:LocalizedText LC_BREEDING_ON_EXPEDITION}"
                                                        Visibility="{Binding IsOnExpedition, Converter={StaticResource VVC}}"
-                                                       Foreground="{StaticResource SameGenderBrush}" FontSize="10" FontWeight="Bold" />
+                                                       Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}" FontSize="10" FontWeight="Bold" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Gender.Value}" Margin="0,0,8,0" FontWeight="Bold" />
@@ -130,6 +124,23 @@
 
                     <!-- Work Suitability Section -->
                     <TextBlock Text="{itl:LocalizedText LC_MAIN_TAB_WORK_SUITABILITY}" FontWeight="Bold" FontSize="14" Margin="0,0,0,6" />
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                            <TextBlock Text="{itl:LocalizedText LC_WORKSUITABILITY_FILTER_TYPE}" FontSize="11" />
+                            <ComboBox ItemsSource="{Binding DataContext.WorkSuitabilityTab.WorkTypeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      SelectedItem="{Binding DataContext.WorkSuitabilityTab.SelectedWorkTypeOption, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}"
+                                      DisplayMemberPath="Label.Value" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                            <TextBlock Text="{itl:LocalizedText LC_WORKSUITABILITY_FILTER_MIN_LEVEL}" FontSize="11" />
+                            <ComboBox ItemsSource="{Binding DataContext.WorkSuitabilityTab.MinLevelOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      SelectedItem="{Binding DataContext.WorkSuitabilityTab.MinLevel, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Grid>
                     <TextBlock Text="{Binding DataContext.WorkSuitabilityTab.NoDataText.Value, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                Visibility="{Binding DataContext.WorkSuitabilityTab.HasData, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource VVC_Negate}}"
                                FontStyle="Italic"
@@ -152,6 +163,38 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding TypeName.Value}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <Border Grid.Column="1"
+                                                Background="{DynamicResource {x:Static adonisUi:Brushes.AccentBrush}}"
+                                                CornerRadius="3"
+                                                Padding="6,2">
+                                            <TextBlock Text="{Binding LevelDisplay.Value}" Foreground="White" FontWeight="Bold" FontSize="11" />
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding DataContext.WorkSuitabilityTab.ComparisonEntries, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  Visibility="{Binding DataContext.WorkSuitabilityTab.IsComparisonMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource VVC}}"
+                                  Margin="0,0,0,12">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type catalogVm:WorkSuitabilityComparisonEntryViewModel}">
+                                <Border BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="6"
+                                        Margin="0,2"
+                                        Background="{DynamicResource {x:Static adonisUi:Brushes.Layer2BackgroundBrush}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding Pal.Name.Value}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding OwnedCountsDisplay.Value}" FontSize="10" Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                                        </StackPanel>
                                         <Border Grid.Column="1"
                                                 Background="{DynamicResource {x:Static adonisUi:Brushes.AccentBrush}}"
                                                 CornerRadius="3"
@@ -207,21 +250,28 @@
                                                 <Style TargetType="TextBlock">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Status}" Value="{x:Static model:RecipeAvailabilityStatus.BothParentsOwned}">
-                                                            <Setter Property="Foreground" Value="{StaticResource ReadyBrush}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.SuccessBrush}}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Status}" Value="{x:Static model:RecipeAvailabilityStatus.IncompatibleParentsOwned}">
-                                                            <Setter Property="Foreground" Value="{StaticResource SameGenderBrush}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Status}" Value="{x:Static model:RecipeAvailabilityStatus.OneParentOwned}">
-                                                            <Setter Property="Foreground" Value="{StaticResource OneParentBrush}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.AccentBrush}}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Status}" Value="{x:Static model:RecipeAvailabilityStatus.NeitherParentOwned}">
-                                                            <Setter Property="Foreground" Value="{StaticResource UnavailableBrush}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
+
+                                        <!-- Missing Pair Explanation Note -->
+                                        <TextBlock Visibility="{Binding HasMissingReasonNote, Converter={StaticResource VVC}}"
+                                                   Text="{Binding MissingReasonNote.Value}"
+                                                   FontSize="10" FontStyle="Italic"
+                                                   Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
+                                                   Margin="0,0,0,4" />
 
                                         <!-- Matching Pairs List -->
                                         <Expander Header="{Binding MatchingPairCountDisplay.Value}" IsExpanded="False" Visibility="{Binding HasMatchingPairs, Converter={StaticResource VVC}}">
@@ -254,7 +304,7 @@
                                                                 </Grid>
                                                                 <TextBlock Visibility="{Binding HasExpeditionParent, Converter={StaticResource VVC}}"
                                                                            Text="{Binding ExpeditionWarningText.Value}"
-                                                                           Foreground="{StaticResource SameGenderBrush}"
+                                                                           Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}"
                                                                            FontSize="10" FontWeight="Bold" Margin="0,2,0,0" />
                                                             </StackPanel>
                                                         </Border>
