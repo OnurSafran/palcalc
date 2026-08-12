@@ -638,6 +638,9 @@ Bu, bilgisayarınızdaki kayıtlı dosyaları silmez..</value>
   <data name="LC_SAVESEARCH_SETTINGS_RESET" xml:space="preserve">
     <value>Sıfırla</value>
   </data>
+  <data name="LC_SAVEWINDOW_TAB_BREEDING" xml:space="preserve">
+    <value>Pal Kataloğu</value>
+  </data>
   <data name="LC_SAVEWINDOW_TAB_DETAILS" xml:space="preserve">
     <value>Detaylar</value>
   </data>
@@ -646,6 +649,87 @@ Bu, bilgisayarınızdaki kayıtlı dosyaları silmez..</value>
   </data>
   <data name="LC_SAVEWINDOW_TITLE" xml:space="preserve">
     <value>Müfettişi Kaydet - {SaveLabel}</value>
+  </data>
+  <data name="LC_BREEDING_STATUS_READY" xml:space="preserve">
+    <value>Eşleşen çift var</value>
+  </data>
+  <data name="LC_BREEDING_STATUS_MISSING" xml:space="preserve">
+    <value>Eşleşen çift yok</value>
+  </data>
+  <data name="LC_BREEDING_STATUS_UNAVAILABLE" xml:space="preserve">
+    <value>Üreme verisi yok</value>
+  </data>
+  <data name="LC_BREEDING_STATUS_UNKNOWN" xml:space="preserve">
+    <value>Bilinmeyen kayıt verisi</value>
+  </data>
+  <data name="LC_BREEDING_FILTER_ALL" xml:space="preserve">
+    <value>Tümü</value>
+  </data>
+  <data name="LC_BREEDING_FILTER_OWNED" xml:space="preserve">
+    <value>Sahip olunan</value>
+  </data>
+  <data name="LC_BREEDING_FILTER_BREEDABLE" xml:space="preserve">
+    <value>Şimdi üretilebilir</value>
+  </data>
+  <data name="LC_BREEDING_SORT_PALDEX" xml:space="preserve">
+    <value>PalDex No</value>
+  </data>
+  <data name="LC_BREEDING_SORT_NAME" xml:space="preserve">
+    <value>İsim</value>
+  </data>
+  <data name="LC_BREEDING_RECIPE_BOTH" xml:space="preserve">
+    <value>Eşleşen çift var</value>
+  </data>
+  <data name="LC_BREEDING_RECIPE_SAME_GENDER" xml:space="preserve">
+    <value>Ebeveynler var ancak uyumlu çift yok</value>
+  </data>
+  <data name="LC_BREEDING_RECIPE_ONE" xml:space="preserve">
+    <value>Tek ebeveyn var</value>
+  </data>
+  <data name="LC_BREEDING_RECIPE_NONE" xml:space="preserve">
+    <value>Ebeveyn yok</value>
+  </data>
+  <data name="LC_BREEDING_ON_EXPEDITION" xml:space="preserve">
+    <value>Keşif gezisinde</value>
+  </data>
+  <data name="LC_BREEDING_OWNED_COUNT" xml:space="preserve">
+    <value>Sahip olunan: {Count}</value>
+  </data>
+  <data name="LC_BREEDING_OWNED_GENDER_BREAKDOWN" xml:space="preserve">
+    <value>Sahip olunan: {Count} ({MaleCount} ♂, {FemaleCount} ♀)</value>
+  </data>
+  <data name="LC_BREEDING_PAIR_COUNT" xml:space="preserve">
+    <value>Eşleşen çift sayısı: {Count}</value>
+  </data>
+  <data name="LC_BREEDING_PAIRS_TRUNCATED" xml:space="preserve">
+    <value>İlk {Count} çift gösteriliyor.</value>
+  </data>
+  <data name="LC_BREEDING_PALDEX_LABEL" xml:space="preserve">
+    <value>PalDex #{Number}</value>
+  </data>
+  <data name="LC_BREEDING_SEARCH_HINT" xml:space="preserve">
+    <value>Pal adına, PalDex numarasına veya dahili kimliğe göre ara</value>
+  </data>
+  <data name="LC_BREEDING_OWNED_INSTANCES" xml:space="preserve">
+    <value>Kayıttaki sahip olunan örnekler</value>
+  </data>
+  <data name="LC_BREEDING_RECIPES" xml:space="preserve">
+    <value>Üreme tarifleri</value>
+  </data>
+  <data name="LC_BREEDING_SCOPE_GUILD" xml:space="preserve">
+    <value>Kapsam: lonca ({Name})</value>
+  </data>
+  <data name="LC_BREEDING_SCOPE_PLAYER" xml:space="preserve">
+    <value>Kapsam: oyuncu ({Name})</value>
+  </data>
+  <data name="LC_BREEDING_SCOPE_SINGLE_PLAYER" xml:space="preserve">
+    <value>Kapsam: kayıttaki tüm Pal'lar (tek oyunculu)</value>
+  </data>
+  <data name="LC_BREEDING_SCOPE_UNRESOLVED" xml:space="preserve">
+    <value>Kapsam kullanılamıyor: seçili oyuncu çözümlenemedi</value>
+  </data>
+  <data name="LC_BREEDING_LOCATION_UNKNOWN" xml:space="preserve">
+    <value>Bilinmeyen konum</value>
   </data>
   <data name="LC_SAVE_FILE" xml:space="preserve">
     <value>Dosyayı Kaydet</value>

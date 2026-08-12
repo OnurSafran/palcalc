@@ -943,6 +943,10 @@ namespace PalCalc.UI.Localization {
         /// <summary>
         ///   Looks up a localized string similar to .
         /// </summary>
+        LC_SAVEWINDOW_TAB_BREEDING,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
         LC_SAVEWINDOW_TAB_DETAILS,
         /// <summary>
         ///   Looks up a localized string similar to .
@@ -952,6 +956,114 @@ namespace PalCalc.UI.Localization {
         ///   Looks up a localized string similar to SaveLabel.
         /// </summary>
         LC_SAVEWINDOW_TITLE,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_STATUS_READY,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_STATUS_MISSING,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_STATUS_UNAVAILABLE,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_STATUS_UNKNOWN,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_FILTER_ALL,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_FILTER_OWNED,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_FILTER_BREEDABLE,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_SORT_PALDEX,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_SORT_NAME,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_RECIPE_BOTH,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_RECIPE_SAME_GENDER,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_RECIPE_ONE,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_RECIPE_NONE,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_ON_EXPEDITION,
+        /// <summary>
+        ///   Looks up a localized string similar to Count.
+        /// </summary>
+        LC_BREEDING_OWNED_COUNT,
+        /// <summary>
+        ///   Looks up a localized string similar to Count | MaleCount | FemaleCount.
+        /// </summary>
+        LC_BREEDING_OWNED_GENDER_BREAKDOWN,
+        /// <summary>
+        ///   Looks up a localized string similar to Count.
+        /// </summary>
+        LC_BREEDING_PAIR_COUNT,
+        /// <summary>
+        ///   Looks up a localized string similar to Count.
+        /// </summary>
+        LC_BREEDING_PAIRS_TRUNCATED,
+        /// <summary>
+        ///   Looks up a localized string similar to Number.
+        /// </summary>
+        LC_BREEDING_PALDEX_LABEL,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_SEARCH_HINT,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_OWNED_INSTANCES,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_RECIPES,
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        LC_BREEDING_SCOPE_GUILD,
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        LC_BREEDING_SCOPE_PLAYER,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_SCOPE_SINGLE_PLAYER,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_SCOPE_UNRESOLVED,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_LOCATION_UNKNOWN,
         /// <summary>
         ///   Looks up a localized string similar to .
         /// </summary>
@@ -1247,4 +1359,3 @@ namespace PalCalc.UI.Localization {
     }
 
 }
-

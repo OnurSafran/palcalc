@@ -1,4 +1,4 @@
-﻿<adonisControls:AdonisWindow x:Class="PalCalc.UI.View.Inspector.SaveInspectorWindow"
+<adonisControls:AdonisWindow x:Class="PalCalc.UI.View.Inspector.SaveInspectorWindow"
                              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -17,7 +17,7 @@
                              IconVisibility="Collapsed"
                              Title="{Binding WindowTitle.Value}"
                              Width="900" Height="550"
-                             MinWidth="480" MinHeight="320"
+                             MinWidth="680" MinHeight="320"
                              behaviors:WindowPlacementBehavior.Key="SaveInspector"
                              behaviors:WindowPlacementBehavior.Mode="SizeAndState"
                              >
@@ -102,6 +102,9 @@
         <Style TargetType="Window" BasedOn="{StaticResource {x:Type Window}}" />
     </Window.Style>
     <TabControl Padding="0" Margin="0">
+        <TabItem Header="{itl:LocalizedText LC_SAVEWINDOW_TAB_BREEDING}">
+            <local:PalBreedingCatalogView DataContext="{Binding Catalog}" />
+        </TabItem>
         <TabItem Header="{itl:LocalizedText LC_SAVEWINDOW_TAB_SEARCH}">
             <local:SearchView DataContext="{Binding Search}" />
         </TabItem>

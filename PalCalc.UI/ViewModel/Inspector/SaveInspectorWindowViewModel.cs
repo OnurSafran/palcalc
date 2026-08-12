@@ -1,4 +1,4 @@
-﻿using PalCalc.Model;
+using PalCalc.Model;
 using PalCalc.SaveReader;
 using PalCalc.UI.Localization;
 using PalCalc.UI.Model;
@@ -27,6 +27,7 @@ namespace PalCalc.UI.ViewModel.Inspector
 
         public SearchViewModel Search { get; }
         public SaveDetailsViewModel Details { get; }
+        public PalBreedingCatalogViewModel Catalog { get; }
 
         public ILocalizedText WindowTitle { get; }
 
@@ -40,7 +41,11 @@ namespace PalCalc.UI.ViewModel.Inspector
             DisplayedSave = sgvm;
 
             Search = new SearchViewModel(sgvm, cachedSave, settings);
-            Details = new SaveDetailsViewModel(slvm.SourceLocation, cachedSave);
+            Details = new SaveDetailsViewModel(slvm?.SourceLocation, cachedSave);
+
+            var palDb = PalDB.LoadEmbedded();
+            var breedingDb = PalBreedingDB.LoadEmbedded(palDb);
+            Catalog = new PalBreedingCatalogViewModel(cachedSave, palDb, breedingDb, settings);
 
             WindowTitle = LocalizationCodes.LC_SAVEWINDOW_TITLE.Bind(sgvm.CombinedLabel);
         }
