@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -77,6 +77,8 @@ namespace PalCalc.UI.ViewModel
         private SolverControlsViewModel solverControls;
         [ObservableProperty]
         private PalTargetListViewModel palTargetList;
+        [ObservableProperty]
+        private PalBreedingCatalogViewModel catalog;
 
         [ObservableProperty]
         private bool showNoResultsNotice = false;
@@ -190,6 +192,12 @@ namespace PalCalc.UI.ViewModel
                     WeakEventManager<PalSpecifierViewModel, EventArgs>.AddHandler(target, nameof(target.ResultsCheckedStateChanged), PalSpecifierCheckedStateChanged);
                 }
             }
+
+            var breedingDb = PalBreedingDB.LoadEmbedded(db);
+            var cachedSave = selectedSave?.Value != null ? Storage.LoadSaveFromCache(selectedSave.Value, db) : null;
+            var gameSettings = selectedSave?.Value != null ? GameSettingsViewModel.Load(selectedSave.Value).ModelObject : GameSettings.Defaults;
+
+            Catalog = new PalBreedingCatalogViewModel(cachedSave, db, breedingDb, gameSettings);
         }
 
         public void Dispose()
@@ -224,6 +232,10 @@ namespace PalCalc.UI.ViewModel
         {
             if (save != OpenedSave?.Value || cachedSave == null) return;
             PalTargetList.UpdateCachedData(cachedSave, GameSettingsViewModel.Load(save).ModelObject);
+
+            var gameSettings = GameSettingsViewModel.Load(save).ModelObject;
+            var breedingDb = PalBreedingDB.LoadEmbedded(db);
+            Catalog = new PalBreedingCatalogViewModel(cachedSave, db, breedingDb, gameSettings);
         }
 
         private void SolverControls_PropertyChanged(object sender, PropertyChangedEventArgs e)

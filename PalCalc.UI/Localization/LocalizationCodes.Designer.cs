@@ -1356,6 +1356,23 @@ namespace PalCalc.UI.Localization {
         ///   Looks up a localized string similar to .
         /// </summary>
         LC_WINDOW_TITLE,
+        LC_MAIN_TAB_SOLVER,
+        LC_MAIN_TAB_PAL_CATALOG,
+        LC_MAIN_TAB_WORK_SUITABILITY,
+        LC_WORKSUITABILITY_NO_DATA,
+        LC_WORKSUITABILITY_LEVEL,
+        LC_WORKTYPE_KINDLING,
+        LC_WORKTYPE_WATERING,
+        LC_WORKTYPE_PLANTING,
+        LC_WORKTYPE_GENERATE_ELECTRICITY,
+        LC_WORKTYPE_HANDIWORK,
+        LC_WORKTYPE_GATHERING,
+        LC_WORKTYPE_LUMBERING,
+        LC_WORKTYPE_MINING,
+        LC_WORKTYPE_MEDICINE_PRODUCTION,
+        LC_WORKTYPE_COOLING,
+        LC_WORKTYPE_TRANSPORTING,
+        LC_WORKTYPE_FARMING,
     }
 
 }

@@ -1155,4 +1155,55 @@ When connecting to another person's multiplayer world, Palworld does not downloa
   <data name="LC_UI_LAYOUT_RESET_NOTICE" xml:space="preserve">
     <value>Saved window and panel layouts were reset. The defaults will be used the next time Pal Calc starts.</value>
   </data>
+  <data name="LC_MAIN_TAB_SOLVER" xml:space="preserve">
+    <value>Breeding</value>
+  </data>
+  <data name="LC_MAIN_TAB_PAL_CATALOG" xml:space="preserve">
+    <value>Pal Catalog</value>
+  </data>
+  <data name="LC_MAIN_TAB_WORK_SUITABILITY" xml:space="preserve">
+    <value>Work Suitability</value>
+  </data>
+  <data name="LC_WORKSUITABILITY_NO_DATA" xml:space="preserve">
+    <value>No work suitability data available for this Pal.</value>
+  </data>
+  <data name="LC_WORKSUITABILITY_LEVEL" xml:space="preserve">
+    <value>Lv. {Level}</value>
+  </data>
+  <data name="LC_WORKTYPE_KINDLING" xml:space="preserve">
+    <value>Kindling</value>
+  </data>
+  <data name="LC_WORKTYPE_WATERING" xml:space="preserve">
+    <value>Watering</value>
+  </data>
+  <data name="LC_WORKTYPE_PLANTING" xml:space="preserve">
+    <value>Planting</value>
+  </data>
+  <data name="LC_WORKTYPE_GENERATE_ELECTRICITY" xml:space="preserve">
+    <value>Generate Electricity</value>
+  </data>
+  <data name="LC_WORKTYPE_HANDIWORK" xml:space="preserve">
+    <value>Handiwork</value>
+  </data>
+  <data name="LC_WORKTYPE_GATHERING" xml:space="preserve">
+    <value>Gathering</value>
+  </data>
+  <data name="LC_WORKTYPE_LUMBERING" xml:space="preserve">
+    <value>Lumbering</value>
+  </data>
+  <data name="LC_WORKTYPE_MINING" xml:space="preserve">
+    <value>Mining</value>
+  </data>
+  <data name="LC_WORKTYPE_MEDICINE_PRODUCTION" xml:space="preserve">
+    <value>Medicine Production</value>
+  </data>
+  <data name="LC_WORKTYPE_COOLING" xml:space="preserve">
+    <value>Cooling</value>
+  </data>
+  <data name="LC_WORKTYPE_TRANSPORTING" xml:space="preserve">
+    <value>Transporting</value>
+  </data>
+  <data name="LC_WORKTYPE_FARMING" xml:space="preserve">
+    <value>Farming</value>
+  </data>
 </root>

@@ -102,9 +102,6 @@
         <Style TargetType="Window" BasedOn="{StaticResource {x:Type Window}}" />
     </Window.Style>
     <TabControl Padding="0" Margin="0">
-        <TabItem Header="{itl:LocalizedText LC_SAVEWINDOW_TAB_BREEDING}">
-            <local:PalBreedingCatalogView DataContext="{Binding Catalog}" />
-        </TabItem>
         <TabItem Header="{itl:LocalizedText LC_SAVEWINDOW_TAB_SEARCH}">
             <local:SearchView DataContext="{Binding Search}" />
         </TabItem>

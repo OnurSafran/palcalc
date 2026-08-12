@@ -4,6 +4,7 @@ using PalCalc.Model;
 using PalCalc.UI.Localization;
 using PalCalc.UI.Model;
 using PalCalc.UI.ViewModel.Mapped;
+using PalCalc.UI.ViewModel.PalCatalog;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -51,6 +52,8 @@ namespace PalCalc.UI.ViewModel.Inspector
 
         [ObservableProperty]
         private ILocalizedText activeScopeDescription;
+
+        public WorkSuitabilityTabViewModel WorkSuitabilityTab { get; private set; }
 
         private string searchText = "";
         public string SearchText
@@ -183,6 +186,8 @@ namespace PalCalc.UI.ViewModel.Inspector
             {
                 SelectedEntry = VisibleEntries.FirstOrDefault();
             }
+
+            WorkSuitabilityTab = new WorkSuitabilityTabViewModel(this);
         }
 
         partial void OnSelectedEntryChanged(PalCatalogEntryViewModel value)

@@ -1,4 +1,4 @@
-# Save Inspector: Pal Catalog and Breeding Availability
+# Solver: Pal Catalog, Breeding Availability, and Work Suitability
 
 Status: **MVP code complete; Windows release validation remains.**
 
@@ -6,10 +6,11 @@ Status: **MVP code complete; Windows release validation remains.**
 
 ### Implemented
 
-- A third Save Inspector tab named `Pal Catalog`.
+- A `Pal Catalog` tab in the main Solver page, next to the solver tab.
 - A complete, PalDex-ordered catalog from `PalDB.Pals`, including variants and entries without breeding recipes.
 - A virtualized icon grid with localized names, PalDex numbers, owned counts, readiness text, tooltips, keyboard selection, search, filters, and sorting.
 - A selected-Pal detail pane containing owned instances, gender and location information, expedition warnings, every breeding recipe, per-recipe availability, and expandable matching instance pairs.
+- Work suitability in the same selected-Pal detail pane, showing each positive work type and level without requiring a second Pal-selection workflow.
 - A pure model-layer calculator that:
   - accepts only concrete `MALE`/`FEMALE` owned-parent genders;
   - requires opposite genders and distinct non-empty instance IDs;
@@ -22,14 +23,17 @@ Status: **MVP code complete; Windows release validation remains.**
 - In-memory, per-save state for search, filter, sort, and selection.
 - English and Turkish localization entries, non-color status text, and automation names/help text.
 
-### Verification completed on 2026-08-12
+### Verification baseline from 2026-08-12
 
-- `PalCalc.Model.Tests`: **25/25 passed**.
+- `PalCalc.Model.Tests`: **25/25 passed** in the previous verification run.
+- `PalCalc.UI.Tests`: includes a regression test that verifies Work Suitability follows Pal Catalog selection; Windows x64 execution remains required.
 - `PalCalc.UI` Windows-targeted cross-build: **succeeded with 0 errors and 0 warnings** on the final incremental build.
 - XAML compiled successfully as part of the UI build.
 - All localization codes used by the feature exist in `LocalizationCodes.Designer.cs` and `LocalizationCodes.resx`.
 - English and Turkish contain every feature localization key.
 - `git diff --check` passed.
+
+For the current integration change on 2026-08-13, `PalCalc.Model.Tests` builds successfully and `git diff --check` passes. The Windows-targeted UI build and UI test execution still require Windows x64 validation; the UI build did not complete on this host.
 
 The Windows UI test assembly builds, but its tests could not run on the Apple Silicon development host because the project forces an x64 Windows test host. This is an environment limitation, not a passing UI-test result.
 
@@ -41,7 +45,7 @@ These are the remaining release-validation tasks. They are not missing feature c
 
 1. **Run the UI and UI tests on Windows x64.**
    - Execute `PalCalc.UI.Tests` on a supported Windows machine.
-   - Open a real Save Inspector and confirm that the catalog tab loads without binding errors.
+   - Open the main Solver page and confirm that the Pal Catalog tab and its Work Suitability detail section load without binding errors.
 2. **Complete the manual visual matrix.**
    - Test minimum (`680px`) and normal window widths.
    - Test light and dark themes, especially ready/missing/unknown contrast.
@@ -60,7 +64,7 @@ These are the remaining release-validation tasks. They are not missing feature c
 - Add dedicated UI/view-model regression tests for catalog completeness, PalId ordering, state restoration, search/filter behavior, selection details, and server-scope fallback.
 - Translate the new localization keys for locales other than English and Turkish. They currently use the application's English fallback.
 - Replace the feature's fixed hexadecimal status brushes with reviewed theme resources after Windows light/dark contrast testing.
-- Make the full `SaveInspectorWindowViewModel.DesignerInstance` independent of `CachedSaveGame.SampleForDesignerView`. The catalog's own designer instance is deterministic, but the existing inspector/Search/Details designer path still discovers local saves.
+- The existing Save Inspector remains focused on Search and Details. Pal Catalog is intentionally owned by the Solver page so it shares the solver's selected-save context.
 
 ## Recommended next implementation order
 
@@ -74,7 +78,7 @@ The remainder of this document preserves the original requirements and design ra
 
 ## Requested feature
 
-When a user opens the inspector for a selected save file, add a new tab that:
+When a user opens the main Solver page for a selected save file, provide a Pal Catalog tab that:
 
 - lists every Pal species/variant in the game's Pal database;
 - shows a grid of Pal icons when possible;
@@ -83,7 +87,7 @@ When a user opens the inspector for a selected save file, add a new tab that:
 - shows that Pal's breeding data;
 - indicates whether the current save contains a usable matching breeding pair, using a clear positive/negative visual state such as green/red text.
 
-The intended context is the already-open selected-save inspector, so the availability state must be calculated from the selected save rather than from the global database alone.
+The intended context is the selected-save Solver page, so the availability state must be calculated from the selected save rather than from the global database alone.
 
 ## Interpretation for an MVP
 
@@ -109,14 +113,12 @@ Green/red should not be the only signal. Include text, an icon, or a tooltip so 
 
 ## Existing code and likely focus areas
 
-### Inspector shell
+### Solver shell
 
-- [`PalCalc.UI/View/Inspector/SaveInspectorWindow.xaml`](../PalCalc.UI/View/Inspector/SaveInspectorWindow.xaml) already contains a WPF `TabControl` with Search and Details tabs. Add the new tab here.
-- [`PalCalc.UI/ViewModel/Inspector/SaveInspectorWindowViewModel.cs`](../PalCalc.UI/ViewModel/Inspector/SaveInspectorWindowViewModel.cs) constructs the tab view models and receives the selected save, its cache, and game settings. Add a `PalCatalog`/`Breeding` view model property here.
-  > [!NOTE]
-  > When `SaveInspectorWindowViewModel` is instantiated for WPF design mode via `DesignerInstance`, `slvm` (`SavesCollectionViewModel`) is `null`. Any access to `slvm.SourceLocation` must be null-safe (e.g. `slvm?.SourceLocation`).
-  > Also, the existing `CachedSaveGame.SampleForDesignerView` ends with `.First()` over discovered local saves, so design mode can fail on a machine with no saves. The new tab should have a small deterministic designer fixture or tolerate a null/empty sample rather than introducing another dependency on local save discovery.
-- [`PalCalc.UI/View/Inspector/SaveInspectorWindow.xaml.cs`](../PalCalc.UI/View/Inspector/SaveInspectorWindow.xaml.cs) only handles window lifetime; it should remain unchanged unless a responsive-layout behavior truly requires code-behind.
+- [`PalCalc.UI/View/SolverPage.xaml`](../PalCalc.UI/View/SolverPage.xaml) owns the Solver and Pal Catalog tabs.
+- [`PalCalc.UI/ViewModel/SolverPageViewModel.cs`](../PalCalc.UI/ViewModel/SolverPageViewModel.cs) constructs the catalog from the selected save, Pal database, breeding database, and game settings.
+- [`PalCalc.UI/View/Inspector/PalBreedingCatalogView.xaml`](../PalCalc.UI/View/Inspector/PalBreedingCatalogView.xaml) contains the catalog grid and the selected-Pal detail pane, including Work Suitability.
+- [`PalCalc.UI/ViewModel/Inspector/PalBreedingCatalogViewModel.cs`](../PalCalc.UI/ViewModel/Inspector/PalBreedingCatalogViewModel.cs) owns catalog selection and the shared Work Suitability detail state.
 
 ### Save-specific data
 
@@ -396,26 +398,26 @@ To enhance user experience and seamlessly integrate this feature into PalCalc's 
 - **Separate compact readiness from pair enumeration**:
   - The UI creates detailed recipe view models only for the selected Pal, but the calculator still computes exact pair counts and capped pair samples for the whole catalog. Split these paths if profiling shows meaningful startup cost.
 
-## Next step: make Pal Catalog the Pal information hub
+## Pal Catalog as the Pal information hub
 
-The Pal Catalog/Breeding UI should become the single entry point for Pal-focused workflows instead of being another tab inside Save Inspector. Keep raw save inspection in `Inspect`, but move the Pal catalog and its related views into a dedicated Pal hub with separate tabs.
+The Pal Catalog/Breeding UI is the single entry point for Pal-focused workflows on the Solver page. Keep raw save inspection in `Inspect`; the Solver page owns the catalog and its selected-Pal details.
 
 ### Proposed navigation
 
-Use a dedicated `Pal Catalog`/`Pals` page or window with these tabs:
+Use the Solver page with these tabs:
 
 1. **Catalog**
    - Complete PalDex-ordered catalog, variants, search, filters, sorting, icons, ownership counts, and readiness markers.
-2. **Breeding**
-   - Selected-Pal breeding details, all recipes, owned-parent availability, exact matching pairs, locations, expedition warnings, and the future `Send to Solver` action.
-3. **Work suitability**
-   - Work suitability levels for the selected Pal or a filterable comparison grid across all Pals.
+2. **Selected-Pal details**
+   - Breeding details and Work Suitability use the same selected Pal and detail pane.
+   - Show all recipes, owned-parent availability, exact matching pairs, locations, expedition warnings, and the future `Send to Solver` action.
+   - Show Work Suitability levels for the selected Pal; a filterable comparison grid remains a follow-up.
    - Support filtering by work type and minimum level, such as `Mining >= 3` or `Transporting >= 4`.
    - Show the work-type name and numeric level as text; icons and color may supplement but must not be the only signal.
 4. **Owned / locations**
    - Optional follow-up tab for save-owned instances, locations, gender, levels, expedition state, and filters. This can reuse the existing Search/Details view models where practical rather than duplicating raw save inspection.
 
-The selected Pal, search text, filter, sort, and save scope should be shared across the Catalog, Breeding, and Work suitability tabs. Selecting a Pal in Catalog should make the same Pal active when switching to Breeding or Work suitability. The hub must continue to operate against the selected save for ownership and breeding state, while static Pal data remains available even when no save is loaded.
+The selected Pal, search text, filter, sort, and save scope are shared by the catalog grid and the selected-Pal detail pane. Selecting a Pal in the grid updates both breeding and Work Suitability sections. The hub operates against the selected save for ownership and breeding state, while static Pal data remains available even when no save is loaded.
 
 ### Existing work-suitability data
 
@@ -434,7 +436,7 @@ The model already contains static work-suitability data on [`Pal.WorkSuitability
 - Transporting
 - Farming
 
-The embedded `PalCalc.Model/db.json` contains these values under each Pal's `WorkSuitability` object. This is enough for a first Work suitability tab showing database capability and level. Some entries may have a null or incomplete dictionary, so the UI should display `Unknown`/`No data` rather than treating missing values as level zero without disclosure.
+The embedded `PalCalc.Model/db.json` contains these values under each Pal's `WorkSuitability` object. This is enough for the selected-Pal detail section showing database capability and level. Some entries may have a null or incomplete dictionary, so the UI should display `Unknown`/`No data` rather than treating missing values as level zero without disclosure.
 
 Static suitability is not the same as current save availability. The first version should distinguish:
 
@@ -444,17 +446,15 @@ Static suitability is not the same as current save availability. The first versi
 
 ### Recommended implementation order
 
-1. Extract the current `PalBreedingCatalogView` into a reusable Pal hub shell and preserve its calculator/view models.
-2. Move the existing Catalog and Breeding content into separate hub tabs with shared selected-Pal state.
-3. Add a static `WorkSuitabilityViewModel` over `Pal.WorkSuitability` and a localized `WorkType` display mapping.
-4. Add work-type/minimum-level filters and a compact comparison view; defer complex ranking until the data and UX are validated.
-5. Add save-owned counts and locations to the Work suitability view, clearly labeling them as save-specific.
-6. Remove the Pal Catalog tab from Save Inspector after the new hub is working, or leave a short `Open Pal Catalog` link there during transition.
+1. Preserve the catalog calculator and shared selected-Pal view models.
+2. Keep breeding and Work Suitability in one detail pane with shared selected-Pal state.
+3. Add work-type/minimum-level filters and a compact comparison view; defer complex ranking until the data and UX are validated.
+4. Add save-owned counts and locations to the Work suitability view, clearly labeling them as save-specific.
 
 ### Acceptance criteria for the hub
 
-- Users can reach Catalog, Breeding, and Work suitability from one Pal-focused entry point.
-- A Pal selected in one tab remains selected in the others.
+- Users can reach Catalog, breeding details, and Work Suitability from one Pal-focused Solver entry point.
+- A Pal selected in the catalog remains selected in both detail sections.
 - Breeding availability still uses the selected save and its resolved scope.
 - Work suitability renders static database levels without requiring a save.
 - Missing work-suitability data is explicit and does not crash XAML binding.
@@ -477,10 +477,11 @@ The MVP feature has been implemented as specified in this document:
    - Tooltips and detail headers display gender breakdowns `Owned: N (M ♂, F ♀)` so users can immediately spot missing genders.
 
 3. **UI Integration**:
-   - New tab `Pal Catalog` added to `SaveInspectorWindow.xaml` and `SaveInspectorWindowViewModel.cs`.
+   - New Solver tab `Pal Catalog` added to `SolverPage.xaml` and `SolverPageViewModel.cs`.
    - High-performance virtualized grid view using `VirtualizingWrapPanel` in `PalBreedingCatalogView.xaml`.
+   - Work Suitability is rendered in the same selected-Pal detail pane and follows catalog selection.
    - Comprehensive filtering (`All`, `Owned`, `Breedable now`), sorting (`PalDex #`, `Name`), search bar, tooltips, and detail pane.
 
 4. **Localization & Testing**:
    - Localization codes and English/Turkish translations added to `LocalizationCodes.resx`, `LocalizationCodes.Designer.cs`, `en.resx`, and `tr.resx`; other locales use the existing English fallback until translated.
-   - 25/25 unit tests passing in `PalCalc.Model.Tests` (including `PalBreedingCatalogCalculatorTests.cs`).
+   - 25/25 model tests passed in the previous verification run, and `PalCalc.UI.Tests/PalCatalogViewModelTests.cs` covers Work Suitability selection wiring.

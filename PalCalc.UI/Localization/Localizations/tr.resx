@@ -1051,4 +1051,55 @@ Daha yüksek değerler, gereken süre üzerinde minimum etkiye sahiptir..</value
   <data name="LC_RESULT_COLUMNS_RESET" xml:space="preserve">
     <value>Tüm Sütunları Sıfırla</value>
   </data>
+  <data name="LC_MAIN_TAB_SOLVER" xml:space="preserve">
+    <value>Çiftleştirme</value>
+  </data>
+  <data name="LC_MAIN_TAB_PAL_CATALOG" xml:space="preserve">
+    <value>Pal Kataloğu</value>
+  </data>
+  <data name="LC_MAIN_TAB_WORK_SUITABILITY" xml:space="preserve">
+    <value>İş Uygunluğu</value>
+  </data>
+  <data name="LC_WORKSUITABILITY_NO_DATA" xml:space="preserve">
+    <value>Bu Pal için iş uygunluğu verisi bulunmuyor.</value>
+  </data>
+  <data name="LC_WORKSUITABILITY_LEVEL" xml:space="preserve">
+    <value>Seviye {Level}</value>
+  </data>
+  <data name="LC_WORKTYPE_KINDLING" xml:space="preserve">
+    <value>Ateş Yakma</value>
+  </data>
+  <data name="LC_WORKTYPE_WATERING" xml:space="preserve">
+    <value>Sulama</value>
+  </data>
+  <data name="LC_WORKTYPE_PLANTING" xml:space="preserve">
+    <value>Ekim</value>
+  </data>
+  <data name="LC_WORKTYPE_GENERATE_ELECTRICITY" xml:space="preserve">
+    <value>Elektrik Üretimi</value>
+  </data>
+  <data name="LC_WORKTYPE_HANDIWORK" xml:space="preserve">
+    <value>El İşçiliği</value>
+  </data>
+  <data name="LC_WORKTYPE_GATHERING" xml:space="preserve">
+    <value>Toplama</value>
+  </data>
+  <data name="LC_WORKTYPE_LUMBERING" xml:space="preserve">
+    <value>Odunculuk</value>
+  </data>
+  <data name="LC_WORKTYPE_MINING" xml:space="preserve">
+    <value>Madencilik</value>
+  </data>
+  <data name="LC_WORKTYPE_MEDICINE_PRODUCTION" xml:space="preserve">
+    <value>İlaç Üretimi</value>
+  </data>
+  <data name="LC_WORKTYPE_COOLING" xml:space="preserve">
+    <value>Soğutma</value>
+  </data>
+  <data name="LC_WORKTYPE_TRANSPORTING" xml:space="preserve">
+    <value>Taşıma</value>
+  </data>
+  <data name="LC_WORKTYPE_FARMING" xml:space="preserve">
+    <value>Çiftçilik</value>
+  </data>
 </root>
