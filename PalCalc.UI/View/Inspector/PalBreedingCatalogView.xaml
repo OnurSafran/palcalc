@@ -95,7 +95,7 @@
                             <DataTemplate>
                                 <Border BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
                                         BorderThickness="1" CornerRadius="3" Padding="6" Margin="0,2">
-                                    <Grid>
+                                                        <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -302,6 +302,11 @@
                                                                         <TextBlock Text="{Binding Parent2Instance.LocationDescription.Value}" FontSize="10" TextTrimming="CharacterEllipsis" />
                                                                     </StackPanel>
                                                                 </Grid>
+                                                                <Button Content="{Binding PinButtonText}"
+                                                                        Command="{Binding PinCommand}"
+                                                                        HorizontalAlignment="Right"
+                                                                        Padding="5,1"
+                                                                        Margin="0,2,0,0" />
                                                                 <TextBlock Visibility="{Binding HasExpeditionParent, Converter={StaticResource VVC}}"
                                                                            Text="{Binding ExpeditionWarningText.Value}"
                                                                            Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}"

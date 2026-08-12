@@ -4,6 +4,7 @@ using PalCalc.UI.Localization;
 using PalCalc.UI.ViewModel.Mapped;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace PalCalc.UI.ViewModel.Inspector
 {
@@ -12,7 +13,9 @@ namespace PalCalc.UI.ViewModel.Inspector
         public PalBreedingDetailsViewModel(
             PalCatalogEntryResult entryResult,
             IEnumerable<PalInstance> allOwnedPals,
-            GameSettings settings
+            GameSettings settings,
+            ICollection<string> pinnedPairKeys = null,
+            Action<PalBreedingPairViewModel> pinChanged = null
         )
         {
             Pal = PalViewModel.Make(entryResult.ChildPal);
@@ -47,7 +50,7 @@ namespace PalCalc.UI.ViewModel.Inspector
                 .ToList();
 
             Recipes = entryResult.Recipes
-                .Select(r => new PalBreedingRecipeViewModel(r, settings))
+                .Select(r => new PalBreedingRecipeViewModel(r, settings, pinnedPairKeys, pinChanged))
                 .OrderByDescending(r => r.Status == RecipeAvailabilityStatus.BothParentsOwned)
                 .ThenByDescending(r => r.Status == RecipeAvailabilityStatus.IncompatibleParentsOwned)
                 .ThenByDescending(r => r.Status == RecipeAvailabilityStatus.OneParentOwned)

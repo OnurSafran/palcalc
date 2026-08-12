@@ -17,11 +17,35 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <StackPanel Grid.Row="0" Margin="0,0,0,8">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding OwnedProgressDisplay}" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="1" Text="{Binding BreedableProgressDisplay}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+            </Grid>
+            <Expander Header="Pinned breeding pairs" IsExpanded="{Binding HasPinnedPairs}">
+                <ItemsControl ItemsSource="{Binding PinnedPairs}" Margin="4,3,4,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel Margin="0,1">
+                                <Button DockPanel.Dock="Right" Content="Unpin" Command="{Binding PinCommand}" Padding="5,1" />
+                                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Expander>
+        </StackPanel>
+
         <!-- Search, Filter & Sort Toolbar -->
-        <Grid Grid.Row="0" Margin="0,0,0,8">
+        <Grid Grid.Row="1" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -52,7 +76,7 @@
         </Grid>
 
         <!-- Virtualized Pal Cards Grid -->
-        <ListBox Grid.Row="1"
+        <ListBox Grid.Row="2"
                  ItemsSource="{Binding VisibleEntries}"
                  SelectedItem="{Binding SelectedEntry}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"

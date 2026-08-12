@@ -4,6 +4,7 @@ using PalCalc.UI.Localization;
 using PalCalc.UI.ViewModel.Mapped;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace PalCalc.UI.ViewModel.Inspector
 {
@@ -11,7 +12,9 @@ namespace PalCalc.UI.ViewModel.Inspector
     {
         public PalBreedingRecipeViewModel(
             RecipeMatchResult matchResult,
-            GameSettings settings
+            GameSettings settings,
+            ICollection<string> pinnedPairKeys = null,
+            Action<PalBreedingPairViewModel> pinChanged = null
         )
         {
             Recipe = matchResult.Recipe;
@@ -48,7 +51,7 @@ namespace PalCalc.UI.ViewModel.Inspector
             );
 
             MatchingPairs = matchResult.MatchingPairs
-                .Select(p => new PalBreedingPairViewModel(p, settings))
+                .Select(p => new PalBreedingPairViewModel(p, settings, pinnedPairKeys?.Contains(PalBreedingPairViewModel.MakePairKey(p.Parent1, p.Parent2)) == true, pinChanged))
                 .ToList();
 
             MatchingPairCountDisplay = LocalizationCodes.LC_BREEDING_PAIR_COUNT.Bind(matchResult.MatchingPairCount);

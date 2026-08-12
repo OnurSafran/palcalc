@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Collections.ObjectModel;
 
 namespace PalCalc.UI.ViewModel.Inspector
 {
@@ -40,6 +41,8 @@ namespace PalCalc.UI.ViewModel.Inspector
         private readonly List<PalInstance> activeOwnedPals;
         private readonly GameSettings settings;
         private readonly PalCatalogState cachedState;
+
+        public ObservableCollection<PalBreedingPairViewModel> PinnedPairs { get; } = new();
 
         [ObservableProperty]
         private List<PalCatalogEntryViewModel> visibleEntries;
@@ -98,6 +101,17 @@ namespace PalCalc.UI.ViewModel.Inspector
         }
 
         public List<PalCatalogEntryViewModel> AllEntries { get; }
+
+        public string OwnedProgressDisplay => FormatProgress(FilterOwnedText?.Value ?? "Owned", AllEntries.Count(e => e.OwnedCount > 0));
+        public string BreedableProgressDisplay => FormatProgress(FilterBreedableText?.Value ?? "Breedable Now", AllEntries.Count(e => e.HasMatchingPair));
+        public bool HasPinnedPairs => PinnedPairs.Count > 0;
+
+        private string FormatProgress(string label, int completed)
+        {
+            var total = AllEntries.Count;
+            var percentage = total == 0 ? 0 : completed * 100.0 / total;
+            return $"{label}: {completed}/{total} ({percentage:0}%)";
+        }
 
         public ILocalizedText FilterAllText { get; } = LocalizationCodes.LC_BREEDING_FILTER_ALL.Bind();
         public ILocalizedText FilterOwnedText { get; } = LocalizationCodes.LC_BREEDING_FILTER_OWNED.Bind();
@@ -168,6 +182,8 @@ namespace PalCalc.UI.ViewModel.Inspector
                 .OrderBy(e => e.PalId)
                 .ToList();
 
+            RebuildPinnedPairs();
+
             foreach (var entry in AllEntries)
                 PropertyChangedEventManager.AddHandler(entry.Pal.Name, LocalizedNameChanged, nameof(ILocalizedText.Value));
 
@@ -195,12 +211,45 @@ namespace PalCalc.UI.ViewModel.Inspector
             if (value != null)
             {
                 cachedState.SelectedPalId = value.PalId;
-                SelectedDetails = new PalBreedingDetailsViewModel(value.Result, activeOwnedPals, settings);
+                SelectedDetails = new PalBreedingDetailsViewModel(value.Result, activeOwnedPals, settings, PinnedPairKeys, OnPairPinChanged);
             }
             else
             {
                 SelectedDetails = null;
             }
+        }
+
+        private ICollection<string> PinnedPairKeys => cachedState.PinnedPairKeys;
+
+        private void RebuildPinnedPairs()
+        {
+            PinnedPairs.Clear();
+            foreach (var pair in AllEntries.SelectMany(e => e.Result.Recipes).SelectMany(r => r.MatchingPairs))
+            {
+                var key = PalBreedingPairViewModel.MakePairKey(pair.Parent1, pair.Parent2);
+                if (PinnedPairKeys.Contains(key))
+                    PinnedPairs.Add(new PalBreedingPairViewModel(pair, settings, true, OnPairPinChanged));
+            }
+            OnPropertyChanged(nameof(HasPinnedPairs));
+        }
+
+        private void OnPairPinChanged(PalBreedingPairViewModel pair)
+        {
+            if (pair.IsPinned)
+            {
+                if (!PinnedPairKeys.Contains(pair.PairKey))
+                {
+                    PinnedPairKeys.Add(pair.PairKey);
+                    PinnedPairs.Add(pair);
+                }
+            }
+            else
+            {
+                PinnedPairKeys.Remove(pair.PairKey);
+                PinnedPairs.Remove(PinnedPairs.FirstOrDefault(p => p.PairKey == pair.PairKey));
+            }
+
+            OnPropertyChanged(nameof(HasPinnedPairs));
         }
 
         private void ApplyFilterAndSort()

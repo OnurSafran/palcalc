@@ -10,6 +10,7 @@ namespace PalCalc.UI.Model
         public PalCatalogFilterOption SelectedFilter { get; set; } = PalCatalogFilterOption.All;
         public PalCatalogSortOption SelectedSort { get; set; } = PalCatalogSortOption.PalDex;
         public PalId SelectedPalId { get; set; }
+        public List<string> PinnedPairKeys { get; set; } = new();
     }
 
     public static class PalCatalogStateCache
