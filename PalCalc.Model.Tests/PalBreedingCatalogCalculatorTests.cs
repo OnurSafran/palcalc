@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace PalCalc.Model.Tests
 {
@@ -12,6 +13,47 @@ namespace PalCalc.Model.Tests
         {
             var results = PalBreedingCatalogCalculator.CalculateCatalog(new List<PalInstance>(), paldb, breedingdb);
             Assert.AreEqual(paldb.Pals.Count(), results.Count);
+        }
+
+        [TestMethod]
+        public void CalculationSession_SummariesAreLightweightAndDetailsAreCachedAndOrdered()
+        {
+            var session = PalBreedingCatalogCalculationSession.Create(
+                new List<PalInstance>(),
+                paldb,
+                breedingdb);
+
+            Assert.IsTrue(session.Summaries.All(summary => summary.Recipes.Count == 0));
+
+            var child = session.Summaries.First(summary =>
+                breedingdb.Breeding.Any(recipe => recipe.Child == summary.ChildPal)).ChildPal;
+            var first = session.GetDetails(child);
+            var second = session.GetDetails(child);
+
+            Assert.AreSame(first, second);
+            Assert.IsNotEmpty(first.Recipes);
+            var statusRanks = first.Recipes.Select(recipe => recipe.Status switch
+            {
+                RecipeAvailabilityStatus.BothParentsOwned => 3,
+                RecipeAvailabilityStatus.IncompatibleParentsOwned => 2,
+                RecipeAvailabilityStatus.OneParentOwned => 1,
+                _ => 0
+            }).ToList();
+            CollectionAssert.AreEqual(statusRanks.OrderByDescending(rank => rank).ToList(), statusRanks);
+        }
+
+        [TestMethod]
+        public void CalculationSession_CancellationThrowsOperationCanceledException()
+        {
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+
+            Assert.ThrowsExactly<OperationCanceledException>(() =>
+                PalBreedingCatalogCalculationSession.Create(
+                    new List<PalInstance>(),
+                    paldb,
+                    breedingdb,
+                    cancellationToken: cancellation.Token));
         }
 
         [TestMethod]

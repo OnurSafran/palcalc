@@ -297,6 +297,11 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+                    <ContentControl Grid.RowSpan="2"
+                                    ContentTemplate="{DynamicResource {x:Static adonisUi:Templates.LoadingCircle}}"
+                                    Visibility="{Binding IsLoadingDetails, Converter={StaticResource VVC}}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
                 </Grid>
             </DockPanel>
         </Border>

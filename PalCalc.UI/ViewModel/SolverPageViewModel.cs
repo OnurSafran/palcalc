@@ -21,6 +21,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -63,6 +65,7 @@ namespace PalCalc.UI.ViewModel
         private CancelEventHandler mainWindowClosingHandler;
         private PropertyChangedEventHandler solverControlsPropertyChangedHandler;
         private Action<PassiveSkillsPresetViewModel> presetSelectedHandler;
+        private CancellationTokenSource catalogLoadCancellation;
 
         public ICommand RunSolverCommand { get; }
         public ICommand PauseSolverCommand { get; }
@@ -79,6 +82,8 @@ namespace PalCalc.UI.ViewModel
         private PalTargetListViewModel palTargetList;
         [ObservableProperty]
         private PalBreedingCatalogViewModel catalog;
+        [ObservableProperty]
+        private bool isCatalogLoading;
 
         [ObservableProperty]
         private bool showNoResultsNotice = false;
@@ -197,11 +202,13 @@ namespace PalCalc.UI.ViewModel
             var cachedSave = selectedSave?.Value != null ? Storage.LoadSaveFromCache(selectedSave.Value, db) : null;
             var gameSettings = selectedSave?.Value != null ? GameSettingsViewModel.Load(selectedSave.Value).ModelObject : GameSettings.Defaults;
 
-            Catalog = new PalBreedingCatalogViewModel(cachedSave, db, breedingDb, gameSettings);
+            LoadCatalogAsync(cachedSave, breedingDb, gameSettings);
         }
 
         public void Dispose()
         {
+            catalogLoadCancellation?.Cancel();
+            Catalog?.CancelPendingDetails();
             Storage.SaveReloaded -= Storage_SaveReloaded;
             CachedSaveGame.SaveFileLoadEnd -= CachedSaveGame_SaveFileLoadEnd;
 
@@ -235,7 +242,46 @@ namespace PalCalc.UI.ViewModel
 
             var gameSettings = GameSettingsViewModel.Load(save).ModelObject;
             var breedingDb = PalBreedingDB.LoadEmbedded(db);
-            Catalog = new PalBreedingCatalogViewModel(cachedSave, db, breedingDb, gameSettings);
+            LoadCatalogAsync(cachedSave, breedingDb, gameSettings);
+        }
+
+        private async void LoadCatalogAsync(CachedSaveGame cachedSave, PalBreedingDB breedingDb, GameSettings gameSettings)
+        {
+            catalogLoadCancellation?.Cancel();
+            Catalog?.CancelPendingDetails();
+
+            var cancellation = new CancellationTokenSource();
+            catalogLoadCancellation = cancellation;
+            IsCatalogLoading = true;
+            try
+            {
+                var loadedCatalog = await PalBreedingCatalogViewModel.CreateAsync(
+                    cachedSave,
+                    db,
+                    breedingDb,
+                    gameSettings,
+                    cancellation.Token);
+                if (!cancellation.IsCancellationRequested && ReferenceEquals(catalogLoadCancellation, cancellation))
+                    Catalog = loadedCatalog;
+                else
+                    loadedCatalog.CancelPendingDetails();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed to build Pal Catalog");
+            }
+            finally
+            {
+                if (ReferenceEquals(catalogLoadCancellation, cancellation))
+                {
+                    catalogLoadCancellation = null;
+                    IsCatalogLoading = false;
+                }
+                cancellation.Dispose();
+            }
         }
 
         private void SolverControls_PropertyChanged(object sender, PropertyChangedEventArgs e)

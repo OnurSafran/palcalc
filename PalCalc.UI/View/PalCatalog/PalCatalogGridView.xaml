@@ -108,7 +108,6 @@
                                     <TextBlock Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" Text="{Binding PaldexDisplay.Value}" />
                                     <Separator Margin="0,4" />
                                     <TextBlock Text="{Binding OwnedCountsDisplay.Value}" />
-                                    <TextBlock Text="{Binding MatchingPairCountDisplay.Value}" />
                                     <TextBlock FontWeight="Bold" Margin="0,4,0,0" Text="{Binding StatusText.Value}">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">

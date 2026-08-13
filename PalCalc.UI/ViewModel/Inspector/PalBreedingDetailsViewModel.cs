@@ -50,13 +50,7 @@ namespace PalCalc.UI.ViewModel.Inspector
                 .Select(inst => new PalBreedingOwnedInstanceViewModel(inst, settings))
                 .ToList();
 
-            var sortedRecipes = entryResult.Recipes
-                .OrderByDescending(r => r.Status == RecipeAvailabilityStatus.BothParentsOwned)
-                .ThenByDescending(r => r.Status == RecipeAvailabilityStatus.IncompatibleParentsOwned)
-                .ThenByDescending(r => r.Status == RecipeAvailabilityStatus.OneParentOwned)
-                .ToList();
-
-            Recipes = new LazyRecipeViewModelList(sortedRecipes, settings, pinnedPairKeys, pinChanged);
+            Recipes = new LazyRecipeViewModelList(entryResult.Recipes, settings, pinnedPairKeys, pinChanged);
         }
 
         public PalViewModel Pal { get; }

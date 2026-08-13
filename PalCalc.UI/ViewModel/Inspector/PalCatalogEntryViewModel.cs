@@ -32,9 +32,7 @@ namespace PalCalc.UI.ViewModel.Inspector
                 }
             );
 
-            MatchingPairCount = result.TotalMatchingPairsCount;
             PaldexDisplay = LocalizationCodes.LC_BREEDING_PALDEX_LABEL.Bind(new { Number = PaldexNoDisplay });
-            MatchingPairCountDisplay = LocalizationCodes.LC_BREEDING_PAIR_COUNT.Bind(MatchingPairCount);
             HasMatchingPair = result.HasMatchingPair;
         }
 
@@ -51,8 +49,6 @@ namespace PalCalc.UI.ViewModel.Inspector
         public OwnedPalGenderCounts OwnedCounts { get; }
         public ILocalizedText OwnedCountsDisplay { get; }
 
-        public int MatchingPairCount { get; }
-        public ILocalizedText MatchingPairCountDisplay { get; }
         public bool HasMatchingPair { get; }
         public int OwnedCount => OwnedCounts.Total;
     }

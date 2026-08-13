@@ -10,6 +10,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Collections.ObjectModel;
+using System.Threading;
+using System.Threading.Tasks;
+using Serilog;
 
 namespace PalCalc.UI.ViewModel.Inspector
 {
@@ -28,6 +31,7 @@ namespace PalCalc.UI.ViewModel.Inspector
 
     public partial class PalBreedingCatalogViewModel : ObservableObject
     {
+        private static readonly ILogger logger = Log.ForContext<PalBreedingCatalogViewModel>();
         private static PalBreedingCatalogViewModel designerInstance;
         public static PalBreedingCatalogViewModel DesignerInstance =>
             designerInstance ??= CreateDesignerInstance();
@@ -41,6 +45,8 @@ namespace PalCalc.UI.ViewModel.Inspector
         private readonly List<PalInstance> activeOwnedPals;
         private readonly GameSettings settings;
         private readonly PalCatalogState cachedState;
+        private readonly PalBreedingCatalogCalculationSession calculationSession;
+        private CancellationTokenSource detailsCancellation;
 
         public ObservableCollection<PalBreedingPairViewModel> PinnedPairs { get; } = new();
 
@@ -55,6 +61,9 @@ namespace PalCalc.UI.ViewModel.Inspector
 
         [ObservableProperty]
         private ILocalizedText activeScopeDescription;
+
+        [ObservableProperty]
+        private bool isLoadingDetails;
 
         public WorkSuitabilityTabViewModel WorkSuitabilityTab { get; private set; }
 
@@ -121,63 +130,28 @@ namespace PalCalc.UI.ViewModel.Inspector
         public ILocalizedText SortNameText { get; } = LocalizationCodes.LC_BREEDING_SORT_NAME.Bind();
 
         public PalBreedingCatalogViewModel(CachedSaveGame cachedSave, PalDB palDb, PalBreedingDB breedingDb, GameSettings settings)
+            : this(PrepareCatalogInput(cachedSave), palDb, breedingDb, settings, null)
+        {
+        }
+
+        private PalBreedingCatalogViewModel(
+            CatalogInput input,
+            PalDB palDb,
+            PalBreedingDB breedingDb,
+            GameSettings settings,
+            PalBreedingCatalogCalculationSession calculationSession)
         {
             this.settings = settings ?? GameSettings.Defaults;
-            var saveId = cachedSave?.UnderlyingSave != null ? CachedSaveGame.IdentifierFor(cachedSave.UnderlyingSave) : "designer";
-            cachedState = PalCatalogStateCache.GetState(saveId);
+            cachedState = PalCatalogStateCache.GetState(input.SaveId);
+            activeOwnedPals = input.OwnedPals;
+            ActiveScopeDescription = CreateScopeDescription(input);
+            this.calculationSession = calculationSession ?? PalBreedingCatalogCalculationSession.Create(
+                input.OwnedPals,
+                palDb,
+                breedingDb,
+                input.OwnedDataIsKnown);
 
-            var rawPals = cachedSave?.OwnedPals ?? new List<PalInstance>();
-            var ownedDataIsKnown = cachedSave != null;
-
-            // Resolve server save scope if applicable
-            if (cachedSave != null && cachedSave.IsServerSave)
-            {
-                var mainPlayer = cachedSave.Players?.FirstOrDefault(p => p.Name == cachedSave.PlayerName);
-                if (mainPlayer != null)
-                {
-                    var playerGuild = cachedSave.Guilds?
-                        .FirstOrDefault(g => g?.MemberIds?.Contains(mainPlayer.PlayerId) == true);
-                    if (playerGuild != null)
-                    {
-                        var guildMemberIds = playerGuild.MemberIds ?? new List<string> { mainPlayer.PlayerId };
-
-                        rawPals = rawPals.Where(p =>
-                            (p.OwnerPlayerId != null && guildMemberIds.Contains(p.OwnerPlayerId)) ||
-                            (p.Location != null && p.Location.ContainerId != null &&
-                             cachedSave.GuildsByContainerId?.GetValueOrDefault(p.Location.ContainerId)?.Id == playerGuild.Id)
-                        ).ToList();
-
-                        ActiveScopeDescription = LocalizationCodes.LC_BREEDING_SCOPE_GUILD.Bind(
-                            new { Name = playerGuild.Name ?? playerGuild.InternalName ?? playerGuild.Id }
-                        );
-                    }
-                    else
-                    {
-                        // Fallback strictly to selected player's directly owned Pals
-                        rawPals = rawPals.Where(p => p.OwnerPlayerId == mainPlayer.PlayerId).ToList();
-                        ActiveScopeDescription = LocalizationCodes.LC_BREEDING_SCOPE_PLAYER.Bind(new { Name = mainPlayer.Name });
-                    }
-                }
-                else
-                {
-                    // Never mix unrelated server guilds when the selected player cannot be resolved.
-                    rawPals = new List<PalInstance>();
-                    ownedDataIsKnown = false;
-                    ActiveScopeDescription = LocalizationCodes.LC_BREEDING_SCOPE_UNRESOLVED.Bind();
-                }
-            }
-            else
-            {
-                ActiveScopeDescription = cachedSave == null
-                    ? LocalizationCodes.LC_BREEDING_SCOPE_UNRESOLVED.Bind()
-                    : LocalizationCodes.LC_BREEDING_SCOPE_SINGLE_PLAYER.Bind();
-            }
-
-            activeOwnedPals = rawPals;
-
-            var catalogResults = PalBreedingCatalogCalculator.CalculateCatalog(rawPals, palDb, breedingDb, ownedDataIsKnown);
-
-            AllEntries = catalogResults
+            AllEntries = this.calculationSession.Summaries
                 .Select(r => new PalCatalogEntryViewModel(r))
                 .OrderBy(e => e.PalId)
                 .ToList();
@@ -206,16 +180,137 @@ namespace PalCalc.UI.ViewModel.Inspector
             WorkSuitabilityTab = new WorkSuitabilityTabViewModel(this);
         }
 
-        partial void OnSelectedEntryChanged(PalCatalogEntryViewModel value)
+        public static async Task<PalBreedingCatalogViewModel> CreateAsync(
+            CachedSaveGame cachedSave,
+            PalDB palDb,
+            PalBreedingDB breedingDb,
+            GameSettings settings,
+            CancellationToken cancellationToken = default)
         {
-            if (value != null)
+            var input = PrepareCatalogInput(cachedSave);
+            var calculation = await Task.Run(
+                () => PalBreedingCatalogCalculationSession.Create(
+                    input.OwnedPals,
+                    palDb,
+                    breedingDb,
+                    input.OwnedDataIsKnown,
+                    cancellationToken),
+                cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            return new PalBreedingCatalogViewModel(input, palDb, breedingDb, settings, calculation);
+        }
+
+        private enum CatalogScope
+        {
+            Unresolved,
+            SinglePlayer,
+            Guild,
+            Player
+        }
+
+        private sealed record CatalogInput(
+            string SaveId,
+            List<PalInstance> OwnedPals,
+            bool OwnedDataIsKnown,
+            CatalogScope Scope,
+            string ScopeName);
+
+        private static CatalogInput PrepareCatalogInput(CachedSaveGame cachedSave)
+        {
+            var saveId = cachedSave?.UnderlyingSave != null
+                ? CachedSaveGame.IdentifierFor(cachedSave.UnderlyingSave)
+                : "designer";
+            var rawPals = cachedSave?.OwnedPals?.ToList() ?? new List<PalInstance>();
+            if (cachedSave == null)
+                return new CatalogInput(saveId, rawPals, false, CatalogScope.Unresolved, null);
+            if (!cachedSave.IsServerSave)
+                return new CatalogInput(saveId, rawPals, true, CatalogScope.SinglePlayer, null);
+
+            var mainPlayer = cachedSave.Players?.FirstOrDefault(p => p.Name == cachedSave.PlayerName);
+            if (mainPlayer == null)
+                return new CatalogInput(saveId, new List<PalInstance>(), false, CatalogScope.Unresolved, null);
+
+            var playerGuild = cachedSave.Guilds?
+                .FirstOrDefault(g => g?.MemberIds?.Contains(mainPlayer.PlayerId) == true);
+            if (playerGuild == null)
             {
-                cachedState.SelectedPalId = value.PalId;
-                SelectedDetails = new PalBreedingDetailsViewModel(value.Result, activeOwnedPals, settings, PinnedPairKeys, OnPairPinChanged);
+                return new CatalogInput(
+                    saveId,
+                    rawPals.Where(p => p.OwnerPlayerId == mainPlayer.PlayerId).ToList(),
+                    true,
+                    CatalogScope.Player,
+                    mainPlayer.Name);
             }
-            else
+
+            var guildMemberIds = (playerGuild.MemberIds ?? new List<string> { mainPlayer.PlayerId }).ToHashSet();
+            rawPals = rawPals.Where(p =>
+                (p.OwnerPlayerId != null && guildMemberIds.Contains(p.OwnerPlayerId)) ||
+                (p.Location?.ContainerId != null &&
+                 cachedSave.GuildsByContainerId?.GetValueOrDefault(p.Location.ContainerId)?.Id == playerGuild.Id)
+            ).ToList();
+            return new CatalogInput(
+                saveId,
+                rawPals,
+                true,
+                CatalogScope.Guild,
+                playerGuild.Name ?? playerGuild.InternalName ?? playerGuild.Id);
+        }
+
+        private static ILocalizedText CreateScopeDescription(CatalogInput input) => input.Scope switch
+        {
+            CatalogScope.SinglePlayer => LocalizationCodes.LC_BREEDING_SCOPE_SINGLE_PLAYER.Bind(),
+            CatalogScope.Guild => LocalizationCodes.LC_BREEDING_SCOPE_GUILD.Bind(new { Name = input.ScopeName }),
+            CatalogScope.Player => LocalizationCodes.LC_BREEDING_SCOPE_PLAYER.Bind(new { Name = input.ScopeName }),
+            _ => LocalizationCodes.LC_BREEDING_SCOPE_UNRESOLVED.Bind()
+        };
+
+        async partial void OnSelectedEntryChanged(PalCatalogEntryViewModel value)
+        {
+            detailsCancellation?.Cancel();
+            detailsCancellation = null;
+            SelectedDetails = null;
+
+            if (value == null)
             {
-                SelectedDetails = null;
+                IsLoadingDetails = false;
+                return;
+            }
+
+            cachedState.SelectedPalId = value.PalId;
+            var cancellation = new CancellationTokenSource();
+            var cancellationToken = cancellation.Token;
+            detailsCancellation = cancellation;
+            IsLoadingDetails = true;
+            try
+            {
+                var details = await Task.Run(
+                    () => calculationSession.GetDetails(value.Pal.ModelObject, cancellationToken),
+                    cancellationToken);
+                if (!cancellation.IsCancellationRequested && ReferenceEquals(SelectedEntry, value))
+                {
+                    SelectedDetails = new PalBreedingDetailsViewModel(
+                        details,
+                        activeOwnedPals,
+                        settings,
+                        PinnedPairKeys,
+                        OnPairPinChanged);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed to load details for Pal {PalId}", value.PalId);
+            }
+            finally
+            {
+                if (ReferenceEquals(detailsCancellation, cancellation))
+                {
+                    detailsCancellation = null;
+                    IsLoadingDetails = false;
+                }
+                cancellation.Dispose();
             }
         }
 
@@ -224,14 +319,30 @@ namespace PalCalc.UI.ViewModel.Inspector
         private void RebuildPinnedPairs()
         {
             PinnedPairs.Clear();
-            foreach (var pair in AllEntries.SelectMany(e => e.Result.Recipes).SelectMany(r => r.MatchingPairs))
+            var ownedByInstanceId = activeOwnedPals
+                .Where(p => p != null && !string.IsNullOrWhiteSpace(p.InstanceId))
+                .GroupBy(p => p.InstanceId, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+            var restoredKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var key in PinnedPairKeys)
             {
-                var key = PalBreedingPairViewModel.MakePairKey(pair.Parent1, pair.Parent2);
-                if (PinnedPairKeys.Contains(key))
-                    PinnedPairs.Add(new PalBreedingPairViewModel(pair, settings, true, OnPairPinChanged));
+                var instanceIds = key?.Split('|');
+                if (instanceIds?.Length != 2 || !restoredKeys.Add(key))
+                    continue;
+                if (!ownedByInstanceId.TryGetValue(instanceIds[0], out var parent1) ||
+                    !ownedByInstanceId.TryGetValue(instanceIds[1], out var parent2))
+                    continue;
+
+                PinnedPairs.Add(new PalBreedingPairViewModel(
+                    new PalBreedingPairResult { Parent1 = parent1, Parent2 = parent2 },
+                    settings,
+                    true,
+                    OnPairPinChanged));
             }
             OnPropertyChanged(nameof(HasPinnedPairs));
         }
+
+        public void CancelPendingDetails() => detailsCancellation?.Cancel();
 
         private void OnPairPinChanged(PalBreedingPairViewModel pair)
         {

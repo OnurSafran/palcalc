@@ -277,7 +277,13 @@
                 </TabItem>
 
                 <TabItem Header="{itl:LocalizedText LC_MAIN_TAB_PAL_CATALOG}">
-                    <inspectorView:PalBreedingCatalogView DataContext="{Binding Catalog}" Margin="0,5,0,0" />
+                    <Grid Margin="0,5,0,0">
+                        <inspectorView:PalBreedingCatalogView DataContext="{Binding Catalog}" />
+                        <ContentControl ContentTemplate="{DynamicResource {x:Static adonisUi:Templates.LoadingCircle}}"
+                                        Visibility="{Binding IsCatalogLoading, Converter={StaticResource VVC}}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center" />
+                    </Grid>
                 </TabItem>
 
             </TabControl>

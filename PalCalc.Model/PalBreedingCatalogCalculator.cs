@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace PalCalc.Model
 {
@@ -84,173 +85,11 @@ namespace PalCalc.Model
             bool ownedDataIsKnown = true
         )
         {
-            if (palDb == null) throw new ArgumentNullException(nameof(palDb));
-            if (breedingDb == null) throw new ArgumentNullException(nameof(breedingDb));
-
-            // Duplicate references are normal, but conflicting records or missing identity
-            // fields make save-specific availability unsafe to assert.
-            var sourcePals = (rawOwnedPals ?? Enumerable.Empty<PalInstance>()).ToList();
-            var validPals = sourcePals
-                .Where(p => p != null && p.Pal != null && !string.IsNullOrWhiteSpace(p.InstanceId))
-                .ToList();
-            var catalogPals = palDb.Pals.ToHashSet();
-            var hasMalformedRecord = sourcePals.Any(p => p == null || p.Pal == null || string.IsNullOrWhiteSpace(p.InstanceId));
-            var hasUnknownPal = validPals.Any(p => !catalogPals.Contains(p.Pal));
-            var hasConflictingRecord = validPals
-                .GroupBy(p => p.InstanceId, StringComparer.Ordinal)
-                .Any(g => g.Select(p => (p.Pal, p.Gender)).Distinct().Count() > 1);
-            ownedDataIsKnown &= !hasMalformedRecord && !hasUnknownPal && !hasConflictingRecord;
-
-            var ownedPals = validPals
-                .GroupBy(p => p.InstanceId, StringComparer.Ordinal)
-                .Select(g => g.First())
-                .ToList();
-
-            // 2. Index owned instances by Pal
-            var ownedByPal = ownedPals
-                .GroupBy(p => p.Pal)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            // 3. Compute gender counts per Pal
-            var countsByPal = palDb.Pals.ToDictionary(
-                pal => pal,
-                pal =>
-                {
-                    if (!ownedByPal.TryGetValue(pal, out var instances))
-                    {
-                        return new OwnedPalGenderCounts();
-                    }
-
-                    int male = instances.Count(i => i.Gender == PalGender.MALE);
-                    int female = instances.Count(i => i.Gender == PalGender.FEMALE);
-                    int total = instances.Count;
-                    int other = total - male - female;
-
-                    return new OwnedPalGenderCounts
-                    {
-                        Total = total,
-                        MaleCount = male,
-                        FemaleCount = female,
-                        OtherCount = other
-                    };
-                }
-            );
-
-            // 4. Index breeding recipes by Child Pal
-            var recipesByChild = breedingDb.Breeding
-                .GroupBy(b => b.Child)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            // 5. Build Catalog entry results for every Pal in PalDB
-            var results = new List<PalCatalogEntryResult>();
-
-            foreach (var pal in palDb.Pals)
-            {
-                var ownedCounts = countsByPal[pal];
-
-                if (!recipesByChild.TryGetValue(pal, out var recipes) || recipes.Count == 0)
-                {
-                    results.Add(new PalCatalogEntryResult
-                    {
-                        ChildPal = pal,
-                        Status = PalBreedingStatus.Unavailable,
-                        OwnedCounts = ownedCounts,
-                        Recipes = new List<RecipeMatchResult>()
-                    });
-                    continue;
-                }
-
-                var recipeResults = new List<RecipeMatchResult>();
-
-                foreach (var recipe in recipes)
-                {
-                    var parent1Pal = recipe.Parent1.Pal;
-                    var parent2Pal = recipe.Parent2.Pal;
-
-                    var p1Counts = countsByPal.GetValueOrDefault(parent1Pal, new OwnedPalGenderCounts());
-                    var p2Counts = countsByPal.GetValueOrDefault(parent2Pal, new OwnedPalGenderCounts());
-
-                    var p1Instances = ownedByPal.GetValueOrDefault(parent1Pal, new List<PalInstance>());
-                    var p2Instances = ownedByPal.GetValueOrDefault(parent2Pal, new List<PalInstance>());
-
-                    var pairSearch = FindMatchingPairs(recipe, p1Instances, p2Instances);
-                    var hasBothSuitableParents = HasBothSuitableParents(recipe, p1Instances, p2Instances);
-                    var hasOneSuitableParent = HasSuitableParent(recipe.Parent1, p1Instances) ||
-                                               HasSuitableParent(recipe.Parent2, p2Instances);
-
-                    RecipeAvailabilityStatus recipeStatus;
-                    RecipeMissingReason missingReason = RecipeMissingReason.None;
-
-                    if (!ownedDataIsKnown)
-                    {
-                        recipeStatus = RecipeAvailabilityStatus.Unknown;
-                    }
-                    else if (pairSearch.Count > 0)
-                    {
-                        recipeStatus = RecipeAvailabilityStatus.BothParentsOwned;
-                        if (!pairSearch.HasNonExpeditionPair)
-                        {
-                            missingReason = RecipeMissingReason.OnlyExpeditionParentsAvailable;
-                        }
-                    }
-                    else if (hasBothSuitableParents)
-                    {
-                        recipeStatus = RecipeAvailabilityStatus.IncompatibleParentsOwned;
-                        missingReason = RecipeMissingReason.MissingGenderPair;
-                    }
-                    else if (hasOneSuitableParent)
-                    {
-                        recipeStatus = RecipeAvailabilityStatus.OneParentOwned;
-                        if (p1Counts.Total == 0 && p2Counts.Total > 0)
-                            missingReason = RecipeMissingReason.MissingParent1;
-                        else if (p2Counts.Total == 0 && p1Counts.Total > 0)
-                            missingReason = RecipeMissingReason.MissingParent2;
-                        else
-                            missingReason = RecipeMissingReason.MissingGenderPair;
-                    }
-                    else
-                    {
-                        recipeStatus = RecipeAvailabilityStatus.NeitherParentOwned;
-                        if (p1Counts.Total == 0 && p2Counts.Total == 0)
-                            missingReason = RecipeMissingReason.MissingBothParents;
-                        else if (p1Counts.Total == 0)
-                            missingReason = RecipeMissingReason.MissingParent1;
-                        else if (p2Counts.Total == 0)
-                            missingReason = RecipeMissingReason.MissingParent2;
-                        else
-                            missingReason = RecipeMissingReason.MissingGenderPair;
-                    }
-
-                    recipeResults.Add(new RecipeMatchResult
-                    {
-                        Recipe = recipe,
-                        Status = recipeStatus,
-                        MissingReason = missingReason,
-                        MatchingPairs = pairSearch.Pairs,
-                        MatchingPairCount = pairSearch.Count,
-                        HasNonExpeditionMatchingPair = pairSearch.HasNonExpeditionPair,
-                        Parent1Counts = p1Counts,
-                        Parent2Counts = p2Counts
-                    });
-                }
-
-                bool hasAnyMatchingPair = recipeResults.Any(r => r.MatchingPairCount > 0);
-
-                results.Add(new PalCatalogEntryResult
-                {
-                    ChildPal = pal,
-                    Status = !ownedDataIsKnown
-                        ? PalBreedingStatus.Unknown
-                        : hasAnyMatchingPair ? PalBreedingStatus.Ready : PalBreedingStatus.MissingPair,
-                    OwnedCounts = ownedCounts,
-                    Recipes = recipeResults
-                });
-            }
-
-            return results;
+            var session = PalBreedingCatalogCalculationSession.Create(rawOwnedPals, palDb, breedingDb, ownedDataIsKnown);
+            return session.Summaries.Select(summary => session.GetDetails(summary.ChildPal)).ToList();
         }
 
-        private static bool HasBothSuitableParents(
+        internal static bool HasBothSuitableParents(
             BreedingResult recipe,
             List<PalInstance> p1Instances,
             List<PalInstance> p2Instances
@@ -261,10 +100,10 @@ namespace PalCalc.Model
             return p1Candidates.Any(p1 => p2Candidates.Any(p2 => p1.InstanceId != p2.InstanceId));
         }
 
-        private static bool HasSuitableParent(GenderedPal requiredParent, List<PalInstance> instances) =>
+        internal static bool HasSuitableParent(GenderedPal requiredParent, List<PalInstance> instances) =>
             SuitableParents(requiredParent, instances).Any();
 
-        private static IEnumerable<PalInstance> SuitableParents(GenderedPal requiredParent, IEnumerable<PalInstance> instances) =>
+        internal static IEnumerable<PalInstance> SuitableParents(GenderedPal requiredParent, IEnumerable<PalInstance> instances) =>
             instances.Where(instance =>
                 (instance.Gender == PalGender.MALE || instance.Gender == PalGender.FEMALE) &&
                 (requiredParent.Gender == PalGender.WILDCARD ||
@@ -272,10 +111,11 @@ namespace PalCalc.Model
                  requiredParent.Gender == instance.Gender)
             );
 
-        private static (List<PalBreedingPairResult> Pairs, int Count, bool HasNonExpeditionPair) FindMatchingPairs(
+        internal static (List<PalBreedingPairResult> Pairs, int Count, bool HasNonExpeditionPair) FindMatchingPairs(
             BreedingResult recipe,
             List<PalInstance> p1Instances,
-            List<PalInstance> p2Instances
+            List<PalInstance> p2Instances,
+            CancellationToken cancellationToken = default
         )
         {
             var pairList = new List<PalBreedingPairResult>();
@@ -285,11 +125,13 @@ namespace PalCalc.Model
 
             foreach (var inst1 in p1Instances)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (inst1.Gender != PalGender.MALE && inst1.Gender != PalGender.FEMALE)
                     continue;
 
                 foreach (var inst2 in p2Instances)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (inst2.Gender != PalGender.MALE && inst2.Gender != PalGender.FEMALE)
                         continue;
 
@@ -329,6 +171,276 @@ namespace PalCalc.Model
             }
 
             return (pairList, pairCount, hasNonExpeditionPair);
+        }
+    }
+
+    public sealed class PalBreedingCatalogCalculationSession
+    {
+        private const int DetailCacheCapacity = 20;
+        private static readonly List<PalInstance> NoOwnedPals = new();
+
+        private readonly bool ownedDataIsKnown;
+        private readonly Dictionary<Pal, List<PalInstance>> ownedByPal;
+        private readonly Dictionary<Pal, OwnedPalGenderCounts> countsByPal;
+        private readonly Dictionary<Pal, List<BreedingResult>> recipesByChild;
+        private readonly Dictionary<Pal, PalCatalogEntryResult> detailCache = new();
+        private readonly LinkedList<Pal> detailCacheOrder = new();
+        private readonly object detailCacheLock = new();
+
+        private PalBreedingCatalogCalculationSession(
+            bool ownedDataIsKnown,
+            Dictionary<Pal, List<PalInstance>> ownedByPal,
+            Dictionary<Pal, OwnedPalGenderCounts> countsByPal,
+            Dictionary<Pal, List<BreedingResult>> recipesByChild,
+            IReadOnlyList<PalCatalogEntryResult> summaries)
+        {
+            this.ownedDataIsKnown = ownedDataIsKnown;
+            this.ownedByPal = ownedByPal;
+            this.countsByPal = countsByPal;
+            this.recipesByChild = recipesByChild;
+            Summaries = summaries;
+        }
+
+        public IReadOnlyList<PalCatalogEntryResult> Summaries { get; }
+
+        public static PalBreedingCatalogCalculationSession Create(
+            IEnumerable<PalInstance> rawOwnedPals,
+            PalDB palDb,
+            PalBreedingDB breedingDb,
+            bool ownedDataIsKnown = true,
+            CancellationToken cancellationToken = default)
+        {
+            if (palDb == null) throw new ArgumentNullException(nameof(palDb));
+            if (breedingDb == null) throw new ArgumentNullException(nameof(breedingDb));
+
+            var catalogPalsList = palDb.Pals.ToList();
+            var catalogPals = catalogPalsList.ToHashSet();
+            var sourcePals = (rawOwnedPals ?? Enumerable.Empty<PalInstance>()).ToList();
+            var validPals = sourcePals
+                .Where(p => p != null && p.Pal != null && !string.IsNullOrWhiteSpace(p.InstanceId))
+                .ToList();
+            var hasMalformedRecord = sourcePals.Any(p => p == null || p.Pal == null || string.IsNullOrWhiteSpace(p.InstanceId));
+            var hasUnknownPal = validPals.Any(p => !catalogPals.Contains(p.Pal));
+            var hasConflictingRecord = validPals
+                .GroupBy(p => p.InstanceId, StringComparer.Ordinal)
+                .Any(g => g.Select(p => (p.Pal, p.Gender)).Distinct().Count() > 1);
+            ownedDataIsKnown &= !hasMalformedRecord && !hasUnknownPal && !hasConflictingRecord;
+
+            var ownedPals = validPals
+                .GroupBy(p => p.InstanceId, StringComparer.Ordinal)
+                .Select(g => g.First())
+                .ToList();
+            var ownedByPal = ownedPals
+                .GroupBy(p => p.Pal)
+                .ToDictionary(g => g.Key, g => g.ToList());
+            var countsByPal = catalogPalsList.ToDictionary(
+                pal => pal,
+                pal => CountOwnedPals(ownedByPal.GetValueOrDefault(pal)));
+            var recipesByChild = breedingDb.Breeding
+                .GroupBy(b => b.Child)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var summaries = new List<PalCatalogEntryResult>(catalogPalsList.Count);
+            foreach (var pal in catalogPalsList)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var hasRecipes = recipesByChild.TryGetValue(pal, out var recipes) && recipes.Count > 0;
+                var status = !hasRecipes
+                    ? PalBreedingStatus.Unavailable
+                    : !ownedDataIsKnown
+                        ? PalBreedingStatus.Unknown
+                        : recipes.Any(recipe => HasAnyMatchingPair(recipe, ownedByPal, cancellationToken))
+                            ? PalBreedingStatus.Ready
+                            : PalBreedingStatus.MissingPair;
+
+                summaries.Add(new PalCatalogEntryResult
+                {
+                    ChildPal = pal,
+                    Status = status,
+                    OwnedCounts = countsByPal[pal]
+                });
+            }
+
+            return new PalBreedingCatalogCalculationSession(
+                ownedDataIsKnown,
+                ownedByPal,
+                countsByPal,
+                recipesByChild,
+                summaries);
+        }
+
+        public PalCatalogEntryResult GetDetails(Pal childPal, CancellationToken cancellationToken = default)
+        {
+            if (childPal == null) throw new ArgumentNullException(nameof(childPal));
+
+            lock (detailCacheLock)
+            {
+                if (detailCache.TryGetValue(childPal, out var cached))
+                {
+                    detailCacheOrder.Remove(childPal);
+                    detailCacheOrder.AddLast(childPal);
+                    return cached;
+                }
+            }
+
+            var calculated = CalculateDetails(childPal, cancellationToken);
+
+            lock (detailCacheLock)
+            {
+                if (detailCache.TryGetValue(childPal, out var cached))
+                    return cached;
+
+                detailCache[childPal] = calculated;
+                detailCacheOrder.AddLast(childPal);
+                if (detailCache.Count > DetailCacheCapacity)
+                {
+                    var oldest = detailCacheOrder.First.Value;
+                    detailCacheOrder.RemoveFirst();
+                    detailCache.Remove(oldest);
+                }
+            }
+
+            return calculated;
+        }
+
+        private PalCatalogEntryResult CalculateDetails(Pal childPal, CancellationToken cancellationToken)
+        {
+            if (!recipesByChild.TryGetValue(childPal, out var recipes) || recipes.Count == 0)
+            {
+                return new PalCatalogEntryResult
+                {
+                    ChildPal = childPal,
+                    Status = PalBreedingStatus.Unavailable,
+                    OwnedCounts = countsByPal.GetValueOrDefault(childPal, new OwnedPalGenderCounts())
+                };
+            }
+
+            var recipeResults = new List<RecipeMatchResult>(recipes.Count);
+            foreach (var recipe in recipes)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var p1Counts = countsByPal.GetValueOrDefault(recipe.Parent1.Pal, new OwnedPalGenderCounts());
+                var p2Counts = countsByPal.GetValueOrDefault(recipe.Parent2.Pal, new OwnedPalGenderCounts());
+                var p1Instances = ownedByPal.GetValueOrDefault(recipe.Parent1.Pal, NoOwnedPals);
+                var p2Instances = ownedByPal.GetValueOrDefault(recipe.Parent2.Pal, NoOwnedPals);
+                var pairSearch = PalBreedingCatalogCalculator.FindMatchingPairs(
+                    recipe,
+                    p1Instances,
+                    p2Instances,
+                    cancellationToken);
+                var hasBothSuitableParents = PalBreedingCatalogCalculator.HasBothSuitableParents(recipe, p1Instances, p2Instances);
+                var hasOneSuitableParent = PalBreedingCatalogCalculator.HasSuitableParent(recipe.Parent1, p1Instances) ||
+                                           PalBreedingCatalogCalculator.HasSuitableParent(recipe.Parent2, p2Instances);
+                var status = GetRecipeStatus(pairSearch.Count, hasBothSuitableParents, hasOneSuitableParent);
+                var missingReason = GetMissingReason(
+                    status,
+                    pairSearch.HasNonExpeditionPair,
+                    p1Counts,
+                    p2Counts);
+
+                recipeResults.Add(new RecipeMatchResult
+                {
+                    Recipe = recipe,
+                    Status = status,
+                    MissingReason = missingReason,
+                    MatchingPairs = pairSearch.Pairs,
+                    MatchingPairCount = pairSearch.Count,
+                    HasNonExpeditionMatchingPair = pairSearch.HasNonExpeditionPair,
+                    Parent1Counts = p1Counts,
+                    Parent2Counts = p2Counts
+                });
+            }
+
+            // Cache this ordering with the detail result; repeated selections do not sort again.
+            recipeResults = recipeResults
+                .OrderByDescending(r => r.Status == RecipeAvailabilityStatus.BothParentsOwned)
+                .ThenByDescending(r => r.Status == RecipeAvailabilityStatus.IncompatibleParentsOwned)
+                .ThenByDescending(r => r.Status == RecipeAvailabilityStatus.OneParentOwned)
+                .ToList();
+
+            return new PalCatalogEntryResult
+            {
+                ChildPal = childPal,
+                Status = !ownedDataIsKnown
+                    ? PalBreedingStatus.Unknown
+                    : recipeResults.Any(r => r.MatchingPairCount > 0)
+                        ? PalBreedingStatus.Ready
+                        : PalBreedingStatus.MissingPair,
+                OwnedCounts = countsByPal.GetValueOrDefault(childPal, new OwnedPalGenderCounts()),
+                Recipes = recipeResults
+            };
+        }
+
+        private RecipeAvailabilityStatus GetRecipeStatus(int pairCount, bool hasBothSuitableParents, bool hasOneSuitableParent)
+        {
+            if (!ownedDataIsKnown) return RecipeAvailabilityStatus.Unknown;
+            if (pairCount > 0) return RecipeAvailabilityStatus.BothParentsOwned;
+            if (hasBothSuitableParents) return RecipeAvailabilityStatus.IncompatibleParentsOwned;
+            if (hasOneSuitableParent) return RecipeAvailabilityStatus.OneParentOwned;
+            return RecipeAvailabilityStatus.NeitherParentOwned;
+        }
+
+        private static RecipeMissingReason GetMissingReason(
+            RecipeAvailabilityStatus status,
+            bool hasNonExpeditionPair,
+            OwnedPalGenderCounts p1Counts,
+            OwnedPalGenderCounts p2Counts)
+        {
+            if (status == RecipeAvailabilityStatus.Unknown)
+                return RecipeMissingReason.None;
+            if (status == RecipeAvailabilityStatus.BothParentsOwned)
+                return hasNonExpeditionPair ? RecipeMissingReason.None : RecipeMissingReason.OnlyExpeditionParentsAvailable;
+            if (status == RecipeAvailabilityStatus.IncompatibleParentsOwned)
+                return RecipeMissingReason.MissingGenderPair;
+            if (p1Counts.Total == 0 && p2Counts.Total == 0)
+                return RecipeMissingReason.MissingBothParents;
+            if (p1Counts.Total == 0)
+                return RecipeMissingReason.MissingParent1;
+            if (p2Counts.Total == 0)
+                return RecipeMissingReason.MissingParent2;
+            return RecipeMissingReason.MissingGenderPair;
+        }
+
+        private static OwnedPalGenderCounts CountOwnedPals(List<PalInstance> instances)
+        {
+            if (instances == null) return new OwnedPalGenderCounts();
+            var male = instances.Count(i => i.Gender == PalGender.MALE);
+            var female = instances.Count(i => i.Gender == PalGender.FEMALE);
+            return new OwnedPalGenderCounts
+            {
+                Total = instances.Count,
+                MaleCount = male,
+                FemaleCount = female,
+                OtherCount = instances.Count - male - female
+            };
+        }
+
+        private static bool HasAnyMatchingPair(
+            BreedingResult recipe,
+            Dictionary<Pal, List<PalInstance>> ownedByPal,
+            CancellationToken cancellationToken)
+        {
+            var p1Instances = ownedByPal.GetValueOrDefault(recipe.Parent1.Pal, NoOwnedPals);
+            var p2Instances = ownedByPal.GetValueOrDefault(recipe.Parent2.Pal, NoOwnedPals);
+            foreach (var p1 in p1Instances)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (p1.Gender != PalGender.MALE && p1.Gender != PalGender.FEMALE)
+                    continue;
+
+                foreach (var p2 in p2Instances)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (p2.Gender != PalGender.MALE && p2.Gender != PalGender.FEMALE)
+                    continue;
+                    if (p1.InstanceId == p2.InstanceId || p1.Gender == p2.Gender)
+                    continue;
+                    if (recipe.Matches(p1.Pal, p1.Gender, p2.Pal, p2.Gender))
+                        return true;
+                }
+            }
+
+            return false;
         }
     }
 }
