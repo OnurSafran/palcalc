@@ -53,8 +53,13 @@
                            Margin="0,0,0,6"
                            HorizontalAlignment="Right" />
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel DataContext="{Binding SelectedDetails}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" MaxHeight="300" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel DataContext="{Binding SelectedDetails}">
                     <!-- Header -->
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
@@ -124,23 +129,6 @@
 
                     <!-- Work Suitability Section -->
                     <TextBlock Text="{itl:LocalizedText LC_MAIN_TAB_WORK_SUITABILITY}" FontWeight="Bold" FontSize="14" Margin="0,0,0,6" />
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Margin="0,0,4,0">
-                            <TextBlock Text="{itl:LocalizedText LC_WORKSUITABILITY_FILTER_TYPE}" FontSize="11" />
-                            <ComboBox ItemsSource="{Binding DataContext.WorkSuitabilityTab.WorkTypeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                      SelectedItem="{Binding DataContext.WorkSuitabilityTab.SelectedWorkTypeOption, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}"
-                                      DisplayMemberPath="Label.Value" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Margin="4,0,0,0">
-                            <TextBlock Text="{itl:LocalizedText LC_WORKSUITABILITY_FILTER_MIN_LEVEL}" FontSize="11" />
-                            <ComboBox ItemsSource="{Binding DataContext.WorkSuitabilityTab.MinLevelOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                      SelectedItem="{Binding DataContext.WorkSuitabilityTab.MinLevel, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}" />
-                        </StackPanel>
-                    </Grid>
                     <TextBlock Text="{Binding DataContext.WorkSuitabilityTab.NoDataText.Value, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                Visibility="{Binding DataContext.WorkSuitabilityTab.HasData, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource VVC_Negate}}"
                                FontStyle="Italic"
@@ -175,44 +163,30 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <ItemsControl ItemsSource="{Binding DataContext.WorkSuitabilityTab.ComparisonEntries, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                  Visibility="{Binding DataContext.WorkSuitabilityTab.IsComparisonMode, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource VVC}}"
-                                  Margin="0,0,0,12">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type catalogVm:WorkSuitabilityComparisonEntryViewModel}">
-                                <Border BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
-                                        BorderThickness="1"
-                                        CornerRadius="4"
-                                        Padding="6"
-                                        Margin="0,2"
-                                        Background="{DynamicResource {x:Static adonisUi:Brushes.Layer2BackgroundBrush}}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="{Binding Pal.Name.Value}" FontWeight="SemiBold" />
-                                            <TextBlock Text="{Binding OwnedCountsDisplay.Value}" FontSize="10" Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
-                                        </StackPanel>
-                                        <Border Grid.Column="1"
-                                                Background="{DynamicResource {x:Static adonisUi:Brushes.AccentBrush}}"
-                                                CornerRadius="3"
-                                                Padding="6,2">
-                                            <TextBlock Text="{Binding LevelDisplay.Value}" Foreground="White" FontWeight="Bold" FontSize="11" />
-                                        </Border>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
                     <Separator Margin="0,0,0,12" />
 
                     <!-- Breeding Recipes Section -->
                     <TextBlock Text="{itl:LocalizedText LC_BREEDING_RECIPES}" FontWeight="Bold" FontSize="14" Margin="0,0,0,6" />
-                    <ItemsControl ItemsSource="{Binding Recipes}">
-                        <ItemsControl.ItemTemplate>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding SelectedDetails.Recipes}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.CanContentScroll="True"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Focusable" Value="False" />
+                                <Setter Property="IsHitTestVisible" Value="True" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:PalBreedingRecipeViewModel}">
                                 <Border BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
                                         BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,4"
@@ -321,10 +295,9 @@
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ScrollViewer>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
             </DockPanel>
         </Border>
     </Grid>

@@ -30,7 +30,7 @@
                 <TextBlock Grid.Column="0" Text="{Binding OwnedProgressDisplay}" FontWeight="SemiBold" />
                 <TextBlock Grid.Column="1" Text="{Binding BreedableProgressDisplay}" FontWeight="SemiBold" HorizontalAlignment="Right" />
             </Grid>
-            <Expander Header="Pinned breeding pairs" IsExpanded="{Binding HasPinnedPairs}">
+            <Expander Header="Pinned breeding pairs" IsExpanded="{Binding HasPinnedPairs, Mode=OneWay}">
                 <ItemsControl ItemsSource="{Binding PinnedPairs}" Margin="4,3,4,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>

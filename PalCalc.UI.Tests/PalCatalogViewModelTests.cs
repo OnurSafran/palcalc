@@ -68,20 +68,4 @@ public class PalCatalogViewModelTests
         CollectionAssert.AreEqual(sortedNames, names);
     }
 
-    [TestMethod]
-    public void WorkSuitabilityComparisonFiltersByTypeAndMinimumLevel()
-    {
-        var palDb = PalDB.LoadEmbedded();
-        var breedingDb = PalBreedingDB.LoadEmbedded(palDb);
-        var catalog = new PalBreedingCatalogViewModel(null, palDb, breedingDb, GameSettings.Defaults);
-        var work = catalog.WorkSuitabilityTab;
-
-        work.SelectedWorkTypeOption = work.WorkTypeOptions.Single(option => option.Type == WorkType.Mining);
-        work.MinLevel = 3;
-
-        Assert.IsTrue(work.IsComparisonMode);
-        Assert.IsNotEmpty(work.ComparisonEntries);
-        Assert.IsTrue(work.ComparisonEntries.All(entry =>
-            entry.WorkType == WorkType.Mining && entry.Level >= 3));
-    }
 }

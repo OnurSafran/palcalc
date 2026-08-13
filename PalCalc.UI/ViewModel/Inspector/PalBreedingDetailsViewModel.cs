@@ -5,6 +5,7 @@ using PalCalc.UI.ViewModel.Mapped;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using System.Collections;
 
 namespace PalCalc.UI.ViewModel.Inspector
 {
@@ -49,12 +50,13 @@ namespace PalCalc.UI.ViewModel.Inspector
                 .Select(inst => new PalBreedingOwnedInstanceViewModel(inst, settings))
                 .ToList();
 
-            Recipes = entryResult.Recipes
-                .Select(r => new PalBreedingRecipeViewModel(r, settings, pinnedPairKeys, pinChanged))
+            var sortedRecipes = entryResult.Recipes
                 .OrderByDescending(r => r.Status == RecipeAvailabilityStatus.BothParentsOwned)
                 .ThenByDescending(r => r.Status == RecipeAvailabilityStatus.IncompatibleParentsOwned)
                 .ThenByDescending(r => r.Status == RecipeAvailabilityStatus.OneParentOwned)
                 .ToList();
+
+            Recipes = new LazyRecipeViewModelList(sortedRecipes, settings, pinnedPairKeys, pinChanged);
         }
 
         public PalViewModel Pal { get; }
@@ -64,7 +66,74 @@ namespace PalCalc.UI.ViewModel.Inspector
         public int OwnedCount { get; }
         public ILocalizedText OwnedCountsDisplay { get; }
         public List<PalBreedingOwnedInstanceViewModel> OwnedInstances { get; }
-        public List<PalBreedingRecipeViewModel> Recipes { get; }
+        public IList Recipes { get; }
         public bool HasRecipes => Recipes.Count > 0;
+    }
+
+    // WPF's virtualizing panel reads IList items by index, so recipe view-models are
+    // only created for containers that are actually brought into view.
+    internal sealed class LazyRecipeViewModelList : IList
+    {
+        private readonly IReadOnlyList<RecipeMatchResult> recipes;
+        private readonly PalBreedingRecipeViewModel[] cache;
+        private readonly GameSettings settings;
+        private readonly ICollection<string> pinnedPairKeys;
+        private readonly Action<PalBreedingPairViewModel> pinChanged;
+
+        public LazyRecipeViewModelList(
+            IReadOnlyList<RecipeMatchResult> recipes,
+            GameSettings settings,
+            ICollection<string> pinnedPairKeys,
+            Action<PalBreedingPairViewModel> pinChanged)
+        {
+            this.recipes = recipes;
+            this.settings = settings;
+            this.pinnedPairKeys = pinnedPairKeys;
+            this.pinChanged = pinChanged;
+            cache = new PalBreedingRecipeViewModel[recipes.Count];
+        }
+
+        public int Count => recipes.Count;
+        public bool IsReadOnly => true;
+        public bool IsFixedSize => true;
+        public bool IsSynchronized => false;
+        public object SyncRoot => this;
+
+        public object this[int index]
+        {
+            get => cache[index] ??= new PalBreedingRecipeViewModel(recipes[index], settings, pinnedPairKeys, pinChanged);
+            set => throw new NotSupportedException();
+        }
+
+        public bool Contains(object value) => IndexOf(value) >= 0;
+
+        public int IndexOf(object value)
+        {
+            for (var i = 0; i < cache.Length; i++)
+            {
+                if (ReferenceEquals(cache[i], value))
+                    return i;
+            }
+
+            return -1;
+        }
+
+        public void CopyTo(Array array, int index)
+        {
+            for (var i = 0; i < Count; i++)
+                array.SetValue(this[i], index + i);
+        }
+
+        public IEnumerator GetEnumerator()
+        {
+            for (var i = 0; i < Count; i++)
+                yield return this[i];
+        }
+
+        public int Add(object value) => throw new NotSupportedException();
+        public void Clear() => throw new NotSupportedException();
+        public void Insert(int index, object value) => throw new NotSupportedException();
+        public void Remove(object value) => throw new NotSupportedException();
+        public void RemoveAt(int index) => throw new NotSupportedException();
     }
 }

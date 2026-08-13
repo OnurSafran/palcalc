@@ -10,6 +10,12 @@ namespace PalCalc.UI.ViewModel.Inspector
 {
     public partial class PalBreedingRecipeViewModel : ObservableObject
     {
+        private readonly RecipeMatchResult matchResult;
+        private readonly GameSettings settings;
+        private readonly ICollection<string> pinnedPairKeys;
+        private readonly Action<PalBreedingPairViewModel> pinChanged;
+        private List<PalBreedingPairViewModel> matchingPairs;
+
         public PalBreedingRecipeViewModel(
             RecipeMatchResult matchResult,
             GameSettings settings,
@@ -17,6 +23,10 @@ namespace PalCalc.UI.ViewModel.Inspector
             Action<PalBreedingPairViewModel> pinChanged = null
         )
         {
+            this.matchResult = matchResult;
+            this.settings = settings;
+            this.pinnedPairKeys = pinnedPairKeys;
+            this.pinChanged = pinChanged;
             Recipe = matchResult.Recipe;
             Parent1 = PalViewModel.Make(Recipe.Parent1.Pal);
             Parent2 = PalViewModel.Make(Recipe.Parent2.Pal);
@@ -50,14 +60,10 @@ namespace PalCalc.UI.ViewModel.Inspector
                 }
             );
 
-            MatchingPairs = matchResult.MatchingPairs
-                .Select(p => new PalBreedingPairViewModel(p, settings, pinnedPairKeys?.Contains(PalBreedingPairViewModel.MakePairKey(p.Parent1, p.Parent2)) == true, pinChanged))
-                .ToList();
-
             MatchingPairCountDisplay = LocalizationCodes.LC_BREEDING_PAIR_COUNT.Bind(matchResult.MatchingPairCount);
             HasMoreMatchingPairs = matchResult.HasMoreMatchingPairs;
             DisplayedPairsNotice = LocalizationCodes.LC_BREEDING_PAIRS_TRUNCATED.Bind(
-                new { Count = MatchingPairs.Count }
+                new { Count = matchResult.MatchingPairs.Count }
             );
 
             MissingReason = matchResult.MissingReason;
@@ -83,10 +89,16 @@ namespace PalCalc.UI.ViewModel.Inspector
         public ILocalizedText StatusText { get; }
         public ILocalizedText Parent1CountsDisplay { get; }
         public ILocalizedText Parent2CountsDisplay { get; }
-        public List<PalBreedingPairViewModel> MatchingPairs { get; }
+        public List<PalBreedingPairViewModel> MatchingPairs => matchingPairs ??= matchResult.MatchingPairs
+            .Select(p => new PalBreedingPairViewModel(
+                p,
+                settings,
+                pinnedPairKeys?.Contains(PalBreedingPairViewModel.MakePairKey(p.Parent1, p.Parent2)) == true,
+                pinChanged))
+            .ToList();
         public ILocalizedText MatchingPairCountDisplay { get; }
         public bool HasMoreMatchingPairs { get; }
         public ILocalizedText DisplayedPairsNotice { get; }
-        public bool HasMatchingPairs => MatchingPairs.Count > 0;
+        public bool HasMatchingPairs => matchResult.MatchingPairs.Count > 0;
     }
 }
