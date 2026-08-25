@@ -24,7 +24,7 @@
                 <Border Width="64" Height="64" CornerRadius="32" Background="{Binding Pal.IconBrush}" BorderBrush="White" BorderThickness="1" />
                 <StackPanel Margin="10,0,0,0" Orientation="Vertical" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding Pal.Name.Value}" FontWeight="Bold" />
+                        <TextBlock Text="{Binding Pal.Label.Value}" FontWeight="Bold" />
                         <vp:PalGenderView Foreground="White" DataContext="{Binding PalInstance.Gender}" Height="16" />
                     </StackPanel>
                     <TextBlock>

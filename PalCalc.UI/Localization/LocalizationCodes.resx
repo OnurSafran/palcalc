@@ -433,6 +433,9 @@
   <data name="LC_BREEDING_STATUS_UNKNOWN" xml:space="preserve">
     <value />
   </data>
+  <data name="LC_BREEDING_STATUS_EXPEDITION_ONLY" xml:space="preserve">
+    <value />
+  </data>
   <data name="LC_BREEDING_FILTER_ALL" xml:space="preserve">
     <value />
   </data>
@@ -497,6 +500,15 @@
     <value />
   </data>
   <data name="LC_BREEDING_SCOPE_UNRESOLVED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_BREEDING_PINNED_PAIRS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_BREEDING_PIN" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_BREEDING_UNPIN" xml:space="preserve">
     <value />
   </data>
   <data name="LC_BREEDING_LOCATION_UNKNOWN" xml:space="preserve">

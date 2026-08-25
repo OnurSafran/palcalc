@@ -84,6 +84,9 @@
                                             <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.Unavailable}">
                                                 <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
                                             </DataTrigger>
+                                            <DataTrigger Binding="{Binding HasOnlyExpeditionMatchingPair}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}" />
+                                            </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </TextBlock.Style>
@@ -276,8 +279,9 @@
                                                                         <TextBlock Text="{Binding Parent2Instance.LocationDescription.Value}" FontSize="10" TextTrimming="CharacterEllipsis" />
                                                                     </StackPanel>
                                                                 </Grid>
-                                                                <Button Content="{Binding PinButtonText}"
+                                                                <Button Content="{Binding PinButtonText.Value}"
                                                                         Command="{Binding PinCommand}"
+                                                                        IsEnabled="{Binding CanTogglePin}"
                                                                         HorizontalAlignment="Right"
                                                                         Padding="5,1"
                                                                         Margin="0,2,0,0" />

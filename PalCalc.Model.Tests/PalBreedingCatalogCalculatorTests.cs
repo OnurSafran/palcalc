@@ -206,7 +206,7 @@ namespace PalCalc.Model.Tests
                 new PalInstance { InstanceId = "explicit_2", Pal = recipe.Parent2.Pal, Gender = recipe.Parent2.Gender }
             };
 
-            var correctResult = PalBreedingCatalogCalculator.CalculateCatalog(correctParents.Reverse(), paldb, breedingdb)
+            var correctResult = PalBreedingCatalogCalculator.CalculateCatalog(Enumerable.Reverse(correctParents), paldb, breedingdb)
                 .Single(r => r.ChildPal == recipe.Child);
             Assert.AreEqual(PalBreedingStatus.Ready, correctResult.Status);
 
@@ -260,6 +260,57 @@ namespace PalCalc.Model.Tests
             ).Single(r => r.ChildPal == recipe.Child);
 
             Assert.AreEqual(1, result.TotalMatchingPairsCount);
+        }
+
+        [TestMethod]
+        public void CalculateCatalog_ConflictingCatalogFieldsMarkAvailabilityUnknown()
+        {
+            var cattiva = paldb.Pals.First(p => p.Name == "Cattiva");
+            var results = PalBreedingCatalogCalculator.CalculateCatalog(
+                new[]
+                {
+                    new PalInstance
+                    {
+                        InstanceId = "conflicting_state",
+                        Pal = cattiva,
+                        Gender = PalGender.MALE,
+                        IsOnExpedition = false
+                    },
+                    new PalInstance
+                    {
+                        InstanceId = "conflicting_state",
+                        Pal = cattiva,
+                        Gender = PalGender.MALE,
+                        IsOnExpedition = true
+                    }
+                },
+                paldb,
+                breedingdb);
+
+            Assert.IsTrue(results.Where(r => r.Recipes.Count > 0).All(r => r.Status == PalBreedingStatus.Unknown));
+        }
+
+        [TestMethod]
+        public void CalculateCatalog_PairIdsWithUnderscoresRemainDistinct()
+        {
+            var cattiva = paldb.Pals.First(p => p.Name == "Cattiva");
+            var chikipi = paldb.Pals.First(p => p.Name == "Chikipi");
+            var recipe = breedingdb.Breeding.First(b => b.Parents.Any(p => p.Pal == cattiva) && b.Parents.Any(p => p.Pal == chikipi));
+
+            var recipeResult = PalBreedingCatalogCalculator.CalculateCatalog(
+                new[]
+                {
+                    new PalInstance { InstanceId = "a_b", Pal = cattiva, Gender = PalGender.MALE },
+                    new PalInstance { InstanceId = "a", Pal = cattiva, Gender = PalGender.MALE },
+                    new PalInstance { InstanceId = "c", Pal = chikipi, Gender = PalGender.FEMALE },
+                    new PalInstance { InstanceId = "b_c", Pal = chikipi, Gender = PalGender.FEMALE }
+                },
+                paldb,
+                breedingdb)
+                .Single(r => r.ChildPal == recipe.Child)
+                .Recipes.Single(r => r.Recipe == recipe);
+
+            Assert.AreEqual(4, recipeResult.MatchingPairCount);
         }
 
         [TestMethod]
@@ -364,6 +415,44 @@ namespace PalCalc.Model.Tests
 
             Assert.IsTrue(recipeResult.HasNonExpeditionMatchingPair);
             Assert.AreNotEqual(RecipeMissingReason.OnlyExpeditionParentsAvailable, recipeResult.MissingReason);
+        }
+
+        [TestMethod]
+        public void CalculateCatalog_ExpeditionOnlyPairRemainsBreedableWithWarning()
+        {
+            var cattiva = paldb.Pals.First(p => p.Name == "Cattiva");
+            var chikipi = paldb.Pals.First(p => p.Name == "Chikipi");
+            var recipe = breedingdb.Breeding.First(b => b.Parents.Any(p => p.Pal == cattiva) && b.Parents.Any(p => p.Pal == chikipi));
+
+            var result = PalBreedingCatalogCalculator.CalculateCatalog(
+                new[]
+                {
+                    new PalInstance
+                    {
+                        InstanceId = "cat_expedition",
+                        Pal = cattiva,
+                        Gender = PalGender.MALE,
+                        IsOnExpedition = true
+                    },
+                    new PalInstance
+                    {
+                        InstanceId = "chik_expedition",
+                        Pal = chikipi,
+                        Gender = PalGender.FEMALE,
+                        IsOnExpedition = true
+                    }
+                },
+                paldb,
+                breedingdb)
+                .Single(r => r.ChildPal == recipe.Child);
+
+            Assert.AreEqual(PalBreedingStatus.Ready, result.Status);
+            Assert.IsTrue(result.HasMatchingPair);
+            Assert.IsFalse(result.HasNonExpeditionMatchingPair);
+            Assert.IsTrue(result.HasOnlyExpeditionMatchingPair);
+            Assert.AreEqual(
+                RecipeMissingReason.OnlyExpeditionParentsAvailable,
+                result.Recipes.Single(r => r.Recipe == recipe).MissingReason);
         }
     }
 }

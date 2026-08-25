@@ -13,8 +13,11 @@ namespace PalCalc.UI.ViewModel.Inspector
             Pal = PalViewModel.Make(result.ChildPal);
             PalId = result.ChildPal.Id;
             Status = result.Status;
+            HasOnlyExpeditionMatchingPair = result.HasOnlyExpeditionMatchingPair;
 
-            StatusText = Status switch
+            StatusText = HasOnlyExpeditionMatchingPair
+                ? LocalizationCodes.LC_BREEDING_STATUS_EXPEDITION_ONLY.Bind()
+                : Status switch
             {
                 PalBreedingStatus.Ready => LocalizationCodes.LC_BREEDING_STATUS_READY.Bind(),
                 PalBreedingStatus.MissingPair => LocalizationCodes.LC_BREEDING_STATUS_MISSING.Bind(),
@@ -50,6 +53,7 @@ namespace PalCalc.UI.ViewModel.Inspector
         public ILocalizedText OwnedCountsDisplay { get; }
 
         public bool HasMatchingPair { get; }
+        public bool HasOnlyExpeditionMatchingPair { get; }
         public int OwnedCount => OwnedCounts.Total;
     }
 }

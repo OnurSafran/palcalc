@@ -181,7 +181,7 @@ namespace PalCalc.UI.ViewModel.Mapped
                 }
                 else
                 {
-                    return TargetPal.Name;
+                    return TargetPal.Label;
                 }
             }
         }

@@ -21,7 +21,7 @@ namespace PalCalc.UI.Model
 {
     public class CachedSaveGame
     {
-        private static readonly string SaveReaderVersion = "v44";
+        private static readonly string SaveReaderVersion = "v45";
 
         public CachedSaveGame(ISaveGame underlyingSave)
         {
@@ -97,6 +97,7 @@ namespace PalCalc.UI.Model
                     BasePalContainer bpc => Guilds.FirstOrDefault(g => g.Id == Bases.FirstOrDefault(b => b.Id == bpc.BaseId)?.OwnerGuildId),
                     ViewingCageContainer vcc => Guilds.FirstOrDefault(g => g.Id == Bases.FirstOrDefault(b => b.Id == vcc.BaseId)?.OwnerGuildId),
                     DimensionalPalStorageContainer dpsc => GuildsByPlayerId.GetValueOrDefault(dpsc.PlayerId),
+                    GlobalPalStorageContainer gpsc => GuildsByPlayerId.GetValueOrDefault(gpsc.PlayerId),
                     _ => null
                 }
             );
@@ -125,6 +126,7 @@ namespace PalCalc.UI.Model
             playersByName = null;
             playerGuilds = null;
             basesByGuild = null;
+            containerGuilds = null;
 
             StateId += 1;
         }
@@ -198,6 +200,7 @@ namespace PalCalc.UI.Model
                         {
                             DatabaseVersion = db.Version,
                             LastModified = game.LastModified,
+                            IsServerSave = meta?.IsServerSave ?? false,
                             OwnedPals = charData.Pals,
                             Guilds = charData.Guilds,
                             Players = charData.Players,

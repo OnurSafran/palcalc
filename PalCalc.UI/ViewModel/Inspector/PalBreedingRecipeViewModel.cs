@@ -94,11 +94,21 @@ namespace PalCalc.UI.ViewModel.Inspector
                 p,
                 settings,
                 pinnedPairKeys?.Contains(PalBreedingPairViewModel.MakePairKey(p.Parent1, p.Parent2)) == true,
-                pinChanged))
+                pinChanged,
+                availabilityKnown: Status != RecipeAvailabilityStatus.Unknown))
             .ToList();
         public ILocalizedText MatchingPairCountDisplay { get; }
         public bool HasMoreMatchingPairs { get; }
         public ILocalizedText DisplayedPairsNotice { get; }
         public bool HasMatchingPairs => matchResult.MatchingPairs.Count > 0;
+
+        internal void UpdatePinnedPairState(string pairKey, bool isPinned)
+        {
+            if (matchingPairs == null)
+                return;
+
+            foreach (var pair in matchingPairs.Where(pair => pair.PairKey == pairKey))
+                pair.IsPinned = isPinned;
+        }
     }
 }

@@ -975,6 +975,10 @@ namespace PalCalc.UI.Localization {
         /// <summary>
         ///   Looks up a localized string similar to .
         /// </summary>
+        LC_BREEDING_STATUS_EXPEDITION_ONLY,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
         LC_BREEDING_FILTER_ALL,
         /// <summary>
         ///   Looks up a localized string similar to .
@@ -1060,6 +1064,18 @@ namespace PalCalc.UI.Localization {
         ///   Looks up a localized string similar to .
         /// </summary>
         LC_BREEDING_SCOPE_UNRESOLVED,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_PINNED_PAIRS,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_PIN,
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        LC_BREEDING_UNPIN,
         /// <summary>
         ///   Looks up a localized string similar to .
         /// </summary>

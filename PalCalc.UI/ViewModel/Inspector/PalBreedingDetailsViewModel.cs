@@ -22,8 +22,11 @@ namespace PalCalc.UI.ViewModel.Inspector
             Pal = PalViewModel.Make(entryResult.ChildPal);
             PaldexDisplay = LocalizationCodes.LC_BREEDING_PALDEX_LABEL.Bind(new { Number = entryResult.ChildPal.Id });
             Status = entryResult.Status;
+            HasOnlyExpeditionMatchingPair = entryResult.HasOnlyExpeditionMatchingPair;
 
-            StatusText = Status switch
+            StatusText = HasOnlyExpeditionMatchingPair
+                ? LocalizationCodes.LC_BREEDING_STATUS_EXPEDITION_ONLY.Bind()
+                : Status switch
             {
                 PalBreedingStatus.Ready => LocalizationCodes.LC_BREEDING_STATUS_READY.Bind(),
                 PalBreedingStatus.MissingPair => LocalizationCodes.LC_BREEDING_STATUS_MISSING.Bind(),
@@ -45,7 +48,11 @@ namespace PalCalc.UI.ViewModel.Inspector
             OwnedInstances = (allOwnedPals ?? Enumerable.Empty<PalInstance>())
                 .Where(inst => inst != null && inst.Pal == entryResult.ChildPal && !string.IsNullOrWhiteSpace(inst.InstanceId))
                 .GroupBy(inst => inst.InstanceId, System.StringComparer.Ordinal)
-                .Where(g => g.Select(inst => (inst.Pal, inst.Gender)).Distinct().Count() == 1)
+                .Where(g =>
+                {
+                    var first = g.First();
+                    return g.Skip(1).All(inst => PalBreedingCatalogCalculator.AreEquivalentOwnedRecords(first, inst));
+                })
                 .Select(g => g.First())
                 .Select(inst => new PalBreedingOwnedInstanceViewModel(inst, settings))
                 .ToList();
@@ -56,12 +63,19 @@ namespace PalCalc.UI.ViewModel.Inspector
         public PalViewModel Pal { get; }
         public ILocalizedText PaldexDisplay { get; }
         public PalBreedingStatus Status { get; }
+        public bool HasOnlyExpeditionMatchingPair { get; }
         public ILocalizedText StatusText { get; }
         public int OwnedCount { get; }
         public ILocalizedText OwnedCountsDisplay { get; }
         public List<PalBreedingOwnedInstanceViewModel> OwnedInstances { get; }
         public IList Recipes { get; }
         public bool HasRecipes => Recipes.Count > 0;
+
+        internal void UpdatePinnedPairState(string pairKey, bool isPinned)
+        {
+            if (Recipes is LazyRecipeViewModelList lazyRecipes)
+                lazyRecipes.UpdatePinnedPairState(pairKey, isPinned);
+        }
     }
 
     // WPF's virtualizing panel reads IList items by index, so recipe view-models are
@@ -122,6 +136,12 @@ namespace PalCalc.UI.ViewModel.Inspector
         {
             for (var i = 0; i < Count; i++)
                 yield return this[i];
+        }
+
+        internal void UpdatePinnedPairState(string pairKey, bool isPinned)
+        {
+            foreach (var recipe in cache)
+                recipe?.UpdatePinnedPairState(pairKey, isPinned);
         }
 
         public int Add(object value) => throw new NotSupportedException();

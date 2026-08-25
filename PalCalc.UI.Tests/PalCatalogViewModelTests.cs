@@ -40,7 +40,7 @@ public class PalCatalogViewModelTests
         var breedingDb = PalBreedingDB.LoadEmbedded(palDb);
         var catalog = new PalBreedingCatalogViewModel(null, palDb, breedingDb, GameSettings.Defaults);
 
-        Assert.AreEqual(palDb.Pals.Count(), catalog.AllEntries.Count);
+        Assert.HasCount(palDb.Pals.Count(), catalog.AllEntries);
 
         var palDexIds = palDb.Pals.Select(p => p.Id).ToList();
         var catalogIds = catalog.AllEntries.Select(e => e.PalId).ToList();
@@ -58,7 +58,7 @@ public class PalCatalogViewModelTests
         // Filter by text search
         catalog.SearchText = "Anubis";
         Assert.IsTrue(catalog.VisibleEntries.All(e => e.Pal.Name.Value.Contains("Anubis", System.StringComparison.OrdinalIgnoreCase)));
-        Assert.IsTrue(catalog.VisibleEntries.Count > 0);
+        Assert.IsNotEmpty(catalog.VisibleEntries);
 
         // Clear search & apply Sort by Name
         catalog.SearchText = "";
@@ -66,6 +66,35 @@ public class PalCatalogViewModelTests
         var names = catalog.VisibleEntries.Select(e => e.Pal.Name.Value).ToList();
         var sortedNames = names.OrderBy(n => n).ToList();
         CollectionAssert.AreEqual(sortedNames, names);
+    }
+
+    [TestMethod]
+    public void UnknownAvailabilityKeepsCandidatePairsVisibleButDisablesPinning()
+    {
+        var palDb = PalDB.LoadEmbedded();
+        var breedingDb = PalBreedingDB.LoadEmbedded(palDb);
+        var cattiva = palDb.Pals.First(p => p.Name == "Cattiva");
+        var chikipi = palDb.Pals.First(p => p.Name == "Chikipi");
+        var recipe = breedingDb.Breeding.First(b => b.Parents.Any(p => p.Pal == cattiva) && b.Parents.Any(p => p.Pal == chikipi));
+        var result = PalBreedingCatalogCalculator.CalculateCatalog(
+            new[]
+            {
+                new PalInstance { InstanceId = "unknown_cat", Pal = cattiva, Gender = PalGender.MALE },
+                new PalInstance { InstanceId = "unknown_cat", Pal = cattiva, Gender = PalGender.FEMALE },
+                new PalInstance { InstanceId = "known_chik", Pal = chikipi, Gender = PalGender.FEMALE }
+            },
+            palDb,
+            breedingDb)
+            .Single(entry => entry.ChildPal == recipe.Child);
+
+        var recipeViewModel = new PalBreedingRecipeViewModel(
+            result.Recipes.Single(match => match.Recipe == recipe),
+            GameSettings.Defaults);
+
+        Assert.AreEqual(PalBreedingStatus.Unknown, result.Status);
+        Assert.IsNotEmpty(recipeViewModel.MatchingPairs);
+        Assert.IsTrue(recipeViewModel.HasMatchingPairs);
+        Assert.IsFalse(recipeViewModel.MatchingPairs[0].CanTogglePin);
     }
 
 }

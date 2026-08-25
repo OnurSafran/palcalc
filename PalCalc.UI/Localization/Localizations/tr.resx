@@ -662,6 +662,9 @@ Bu, bilgisayarınızdaki kayıtlı dosyaları silmez..</value>
   <data name="LC_BREEDING_STATUS_UNKNOWN" xml:space="preserve">
     <value>Bilinmeyen kayıt verisi</value>
   </data>
+  <data name="LC_BREEDING_STATUS_EXPEDITION_ONLY" xml:space="preserve">
+    <value>Eşleşen çift var (keşif gezisinde)</value>
+  </data>
   <data name="LC_BREEDING_FILTER_ALL" xml:space="preserve">
     <value>Tümü</value>
   </data>
@@ -669,7 +672,7 @@ Bu, bilgisayarınızdaki kayıtlı dosyaları silmez..</value>
     <value>Sahip olunan</value>
   </data>
   <data name="LC_BREEDING_FILTER_BREEDABLE" xml:space="preserve">
-    <value>Şimdi üretilebilir</value>
+    <value>Eşleşen çift mevcut</value>
   </data>
   <data name="LC_BREEDING_SORT_PALDEX" xml:space="preserve">
     <value>PalDex No</value>
@@ -727,6 +730,15 @@ Bu, bilgisayarınızdaki kayıtlı dosyaları silmez..</value>
   </data>
   <data name="LC_BREEDING_SCOPE_UNRESOLVED" xml:space="preserve">
     <value>Kapsam kullanılamıyor: seçili oyuncu çözümlenemedi</value>
+  </data>
+  <data name="LC_BREEDING_PINNED_PAIRS" xml:space="preserve">
+    <value>Sabitlenmiş üreme çiftleri</value>
+  </data>
+  <data name="LC_BREEDING_PIN" xml:space="preserve">
+    <value>Sabitle</value>
+  </data>
+  <data name="LC_BREEDING_UNPIN" xml:space="preserve">
+    <value>Sabitleneni kaldır</value>
   </data>
   <data name="LC_BREEDING_LOCATION_UNKNOWN" xml:space="preserve">
     <value>Bilinmeyen konum</value>

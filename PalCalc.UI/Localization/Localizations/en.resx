@@ -660,6 +660,9 @@ This will not delete the save files from your computer.</value>
   <data name="LC_BREEDING_STATUS_UNKNOWN" xml:space="preserve">
     <value>Unknown save data</value>
   </data>
+  <data name="LC_BREEDING_STATUS_EXPEDITION_ONLY" xml:space="preserve">
+    <value>Matching pair owned (on expedition)</value>
+  </data>
   <data name="LC_BREEDING_FILTER_ALL" xml:space="preserve">
     <value>All</value>
   </data>
@@ -667,7 +670,7 @@ This will not delete the save files from your computer.</value>
     <value>Owned</value>
   </data>
   <data name="LC_BREEDING_FILTER_BREEDABLE" xml:space="preserve">
-    <value>Breedable now</value>
+    <value>Matching pair available</value>
   </data>
   <data name="LC_BREEDING_SORT_PALDEX" xml:space="preserve">
     <value>PalDex #</value>
@@ -725,6 +728,15 @@ This will not delete the save files from your computer.</value>
   </data>
   <data name="LC_BREEDING_SCOPE_UNRESOLVED" xml:space="preserve">
     <value>Scope unavailable: selected player could not be resolved</value>
+  </data>
+  <data name="LC_BREEDING_PINNED_PAIRS" xml:space="preserve">
+    <value>Pinned breeding pairs</value>
+  </data>
+  <data name="LC_BREEDING_PIN" xml:space="preserve">
+    <value>Pin</value>
+  </data>
+  <data name="LC_BREEDING_UNPIN" xml:space="preserve">
+    <value>Unpin</value>
   </data>
   <data name="LC_BREEDING_LOCATION_UNKNOWN" xml:space="preserve">
     <value>Unknown location</value>

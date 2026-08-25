@@ -15,7 +15,9 @@ namespace PalCalc.UI.Model
 
     public static class PalCatalogStateCache
     {
+        private const int MaxCachedStates = 64;
         private static readonly Dictionary<string, PalCatalogState> states = new();
+        private static readonly LinkedList<string> stateOrder = new();
         private static readonly object statesLock = new();
 
         public static PalCatalogState GetState(string saveId)
@@ -24,12 +26,22 @@ namespace PalCalc.UI.Model
 
             lock (statesLock)
             {
-                if (!states.TryGetValue(saveId, out var state))
+                if (states.TryGetValue(saveId, out var state))
                 {
-                    state = new PalCatalogState();
-                    states[saveId] = state;
+                    stateOrder.Remove(saveId);
+                    stateOrder.AddLast(saveId);
+                    return state;
                 }
 
+                state = new PalCatalogState();
+                states[saveId] = state;
+                stateOrder.AddLast(saveId);
+                if (stateOrder.Count > MaxCachedStates)
+                {
+                    var oldestSaveId = stateOrder.First.Value;
+                    stateOrder.RemoveFirst();
+                    states.Remove(oldestSaveId);
+                }
                 return state;
             }
         }

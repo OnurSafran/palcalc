@@ -30,12 +30,12 @@
                 <TextBlock Grid.Column="0" Text="{Binding OwnedProgressDisplay}" FontWeight="SemiBold" />
                 <TextBlock Grid.Column="1" Text="{Binding BreedableProgressDisplay}" FontWeight="SemiBold" HorizontalAlignment="Right" />
             </Grid>
-            <Expander Header="Pinned breeding pairs" IsExpanded="{Binding HasPinnedPairs, Mode=OneWay}">
+            <Expander Header="{Binding PinnedPairsText.Value}" IsExpanded="{Binding HasPinnedPairs, Mode=OneWay}">
                 <ItemsControl ItemsSource="{Binding PinnedPairs}" Margin="4,3,4,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <DockPanel Margin="0,1">
-                                <Button DockPanel.Dock="Right" Content="Unpin" Command="{Binding PinCommand}" Padding="5,1" />
+                                <Button DockPanel.Dock="Right" Content="{Binding PinButtonText.Value}" Command="{Binding PinCommand}" Padding="5,1" />
                                 <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
                             </DockPanel>
                         </DataTemplate>
@@ -121,6 +121,9 @@
                                                     <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.Unavailable}">
                                                         <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
                                                     </DataTrigger>
+                                                    <DataTrigger Binding="{Binding HasOnlyExpeditionMatchingPair}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}" />
+                                                    </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </TextBlock.Style>
@@ -174,6 +177,9 @@
                                             <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.Unavailable}">
                                                 <Setter Property="Background" Value="#20757575" />
                                             </DataTrigger>
+                                            <DataTrigger Binding="{Binding HasOnlyExpeditionMatchingPair}" Value="True">
+                                                <Setter Property="Background" Value="#20FF9800" />
+                                            </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
@@ -189,6 +195,9 @@
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Status}" Value="{x:Static model:PalBreedingStatus.Unavailable}">
                                                     <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding HasOnlyExpeditionMatchingPair}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>

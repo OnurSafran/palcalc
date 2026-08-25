@@ -103,7 +103,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" Grid.Column="0">
                         <TextBlock
-                            Text="{Binding TargetPal.Name.Value}"
+                            Text="{Binding TargetPal.Label.Value}"
                             FontWeight="Bold"
                             FontSize="14"
                             />

@@ -79,7 +79,7 @@
 
                             <vu:SpacedWrapPanel Orientation="Horizontal" HorizontalAlignment="Stretch" HorizontalSpacing="15">
                                 <StackPanel Orientation="Horizontal">
-                                    <Label Content="{Binding TargetPal.Name.Value}" />
+                                    <Label Content="{Binding TargetPal.Label.Value}" />
                                     <vp:PalGenderView DataContext="{Binding RequiredGender}"
                                                       Visibility="{Binding IsSpecific, Converter={StaticResource VVC}}"
                                                       Height="14"

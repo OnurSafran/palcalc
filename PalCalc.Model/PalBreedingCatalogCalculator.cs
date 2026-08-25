@@ -69,9 +69,11 @@ namespace PalCalc.Model
         public Pal ChildPal { get; set; }
         public PalBreedingStatus Status { get; set; }
         public OwnedPalGenderCounts OwnedCounts { get; set; }
+        public bool HasNonExpeditionMatchingPair { get; set; }
         public List<RecipeMatchResult> Recipes { get; set; } = new List<RecipeMatchResult>();
         public int TotalMatchingPairsCount => Recipes.Sum(r => r.MatchingPairCount);
         public bool HasMatchingPair => Status == PalBreedingStatus.Ready;
+        public bool HasOnlyExpeditionMatchingPair => HasMatchingPair && !HasNonExpeditionMatchingPair;
     }
 
     public static class PalBreedingCatalogCalculator
@@ -111,6 +113,23 @@ namespace PalCalc.Model
                  requiredParent.Gender == instance.Gender)
             );
 
+        public static bool AreEquivalentOwnedRecords(PalInstance first, PalInstance second)
+        {
+            if (ReferenceEquals(first, second)) return true;
+            if (first == null || second == null) return false;
+
+            var firstLocation = first.Location;
+            var secondLocation = second.Location;
+            return string.Equals(first.InstanceId, second.InstanceId, StringComparison.Ordinal) &&
+                   Equals(first.Pal, second.Pal) &&
+                   first.Gender == second.Gender &&
+                   string.Equals(first.OwnerPlayerId, second.OwnerPlayerId, StringComparison.Ordinal) &&
+                   first.IsOnExpedition == second.IsOnExpedition &&
+                   firstLocation?.Type == secondLocation?.Type &&
+                   string.Equals(firstLocation?.ContainerId, secondLocation?.ContainerId, StringComparison.Ordinal) &&
+                   firstLocation?.Index == secondLocation?.Index;
+        }
+
         internal static (List<PalBreedingPairResult> Pairs, int Count, bool HasNonExpeditionPair) FindMatchingPairs(
             BreedingResult recipe,
             List<PalInstance> p1Instances,
@@ -119,28 +138,26 @@ namespace PalCalc.Model
         )
         {
             var pairList = new List<PalBreedingPairResult>();
-            var seenPairKeys = new HashSet<string>();
+            var seenPairKeys = new HashSet<(string First, string Second)>();
             var pairCount = 0;
             var hasNonExpeditionPair = false;
+            var p1Candidates = p1Instances
+                .Where(instance => instance.Gender == PalGender.MALE || instance.Gender == PalGender.FEMALE)
+                .ToList();
+            var p2MaleCandidates = p2Instances.Where(instance => instance.Gender == PalGender.MALE).ToList();
+            var p2FemaleCandidates = p2Instances.Where(instance => instance.Gender == PalGender.FEMALE).ToList();
 
-            foreach (var inst1 in p1Instances)
+            foreach (var inst1 in p1Candidates)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (inst1.Gender != PalGender.MALE && inst1.Gender != PalGender.FEMALE)
-                    continue;
+                var compatibleInst2 = inst1.Gender == PalGender.MALE ? p2FemaleCandidates : p2MaleCandidates;
 
-                foreach (var inst2 in p2Instances)
+                foreach (var inst2 in compatibleInst2)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (inst2.Gender != PalGender.MALE && inst2.Gender != PalGender.FEMALE)
-                        continue;
 
                     // Must be distinct instances
                     if (inst1.InstanceId == inst2.InstanceId)
-                        continue;
-
-                    // Must be opposite concrete genders
-                    if (inst1.Gender == inst2.Gender)
                         continue;
 
                     // Recipe gender match check
@@ -149,8 +166,8 @@ namespace PalCalc.Model
 
                     // Canonical pair key to avoid duplicate (A,B) and (B,A) entries
                     var pairKey = string.CompareOrdinal(inst1.InstanceId, inst2.InstanceId) < 0
-                        ? $"{inst1.InstanceId}_{inst2.InstanceId}"
-                        : $"{inst2.InstanceId}_{inst1.InstanceId}";
+                        ? (inst1.InstanceId, inst2.InstanceId)
+                        : (inst2.InstanceId, inst1.InstanceId);
 
                     if (seenPairKeys.Add(pairKey))
                     {
@@ -223,7 +240,11 @@ namespace PalCalc.Model
             var hasUnknownPal = validPals.Any(p => !catalogPals.Contains(p.Pal));
             var hasConflictingRecord = validPals
                 .GroupBy(p => p.InstanceId, StringComparer.Ordinal)
-                .Any(g => g.Select(p => (p.Pal, p.Gender)).Distinct().Count() > 1);
+                .Any(g =>
+                {
+                    var first = g.First();
+                    return g.Skip(1).Any(p => !PalBreedingCatalogCalculator.AreEquivalentOwnedRecords(first, p));
+                });
             ownedDataIsKnown &= !hasMalformedRecord && !hasUnknownPal && !hasConflictingRecord;
 
             var ownedPals = validPals
@@ -245,11 +266,24 @@ namespace PalCalc.Model
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var hasRecipes = recipesByChild.TryGetValue(pal, out var recipes) && recipes.Count > 0;
+                var hasMatchingPair = false;
+                var hasNonExpeditionMatchingPair = false;
+                if (ownedDataIsKnown && hasRecipes)
+                {
+                    foreach (var recipe in recipes)
+                    {
+                        var availability = FindMatchingPairAvailability(recipe, ownedByPal, cancellationToken);
+                        hasMatchingPair |= availability.HasMatchingPair;
+                        hasNonExpeditionMatchingPair |= availability.HasNonExpeditionPair;
+                        if (hasNonExpeditionMatchingPair)
+                            break;
+                    }
+                }
                 var status = !hasRecipes
                     ? PalBreedingStatus.Unavailable
                     : !ownedDataIsKnown
                         ? PalBreedingStatus.Unknown
-                        : recipes.Any(recipe => HasAnyMatchingPair(recipe, ownedByPal, cancellationToken))
+                        : hasMatchingPair
                             ? PalBreedingStatus.Ready
                             : PalBreedingStatus.MissingPair;
 
@@ -257,7 +291,8 @@ namespace PalCalc.Model
                 {
                     ChildPal = pal,
                     Status = status,
-                    OwnedCounts = countsByPal[pal]
+                    OwnedCounts = countsByPal[pal],
+                    HasNonExpeditionMatchingPair = hasNonExpeditionMatchingPair
                 });
             }
 
@@ -367,6 +402,7 @@ namespace PalCalc.Model
                         ? PalBreedingStatus.Ready
                         : PalBreedingStatus.MissingPair,
                 OwnedCounts = countsByPal.GetValueOrDefault(childPal, new OwnedPalGenderCounts()),
+                HasNonExpeditionMatchingPair = ownedDataIsKnown && recipeResults.Any(r => r.HasNonExpeditionMatchingPair),
                 Recipes = recipeResults
             };
         }
@@ -415,32 +451,40 @@ namespace PalCalc.Model
             };
         }
 
-        private static bool HasAnyMatchingPair(
+        private static (bool HasMatchingPair, bool HasNonExpeditionPair) FindMatchingPairAvailability(
             BreedingResult recipe,
             Dictionary<Pal, List<PalInstance>> ownedByPal,
             CancellationToken cancellationToken)
         {
             var p1Instances = ownedByPal.GetValueOrDefault(recipe.Parent1.Pal, NoOwnedPals);
             var p2Instances = ownedByPal.GetValueOrDefault(recipe.Parent2.Pal, NoOwnedPals);
-            foreach (var p1 in p1Instances)
+            var p1Candidates = p1Instances
+                .Where(instance => instance.Gender == PalGender.MALE || instance.Gender == PalGender.FEMALE)
+                .ToList();
+            var p2MaleCandidates = p2Instances.Where(instance => instance.Gender == PalGender.MALE).ToList();
+            var p2FemaleCandidates = p2Instances.Where(instance => instance.Gender == PalGender.FEMALE).ToList();
+            var hasMatchingPair = false;
+
+            foreach (var p1 in p1Candidates)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (p1.Gender != PalGender.MALE && p1.Gender != PalGender.FEMALE)
-                    continue;
+                var compatibleP2 = p1.Gender == PalGender.MALE ? p2FemaleCandidates : p2MaleCandidates;
 
-                foreach (var p2 in p2Instances)
+                foreach (var p2 in compatibleP2)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (p2.Gender != PalGender.MALE && p2.Gender != PalGender.FEMALE)
-                    continue;
-                    if (p1.InstanceId == p2.InstanceId || p1.Gender == p2.Gender)
-                    continue;
+                    if (p1.InstanceId == p2.InstanceId)
+                        continue;
                     if (recipe.Matches(p1.Pal, p1.Gender, p2.Pal, p2.Gender))
-                        return true;
+                    {
+                        hasMatchingPair = true;
+                        if (!p1.IsOnExpedition && !p2.IsOnExpedition)
+                            return (true, true);
+                    }
                 }
             }
 
-            return false;
+            return (hasMatchingPair, false);
         }
     }
 }

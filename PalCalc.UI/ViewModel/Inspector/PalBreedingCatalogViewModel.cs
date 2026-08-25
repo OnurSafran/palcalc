@@ -112,7 +112,7 @@ namespace PalCalc.UI.ViewModel.Inspector
         public List<PalCatalogEntryViewModel> AllEntries { get; }
 
         public string OwnedProgressDisplay => FormatProgress(FilterOwnedText?.Value ?? "Owned", AllEntries.Count(e => e.OwnedCount > 0));
-        public string BreedableProgressDisplay => FormatProgress(FilterBreedableText?.Value ?? "Breedable Now", AllEntries.Count(e => e.HasMatchingPair));
+        public string BreedableProgressDisplay => FormatProgress(FilterBreedableText?.Value ?? "Matching pair available", AllEntries.Count(e => e.HasMatchingPair));
         public bool HasPinnedPairs => PinnedPairs.Count > 0;
 
         private string FormatProgress(string label, int completed)
@@ -128,6 +128,7 @@ namespace PalCalc.UI.ViewModel.Inspector
 
         public ILocalizedText SortPaldexText { get; } = LocalizationCodes.LC_BREEDING_SORT_PALDEX.Bind();
         public ILocalizedText SortNameText { get; } = LocalizationCodes.LC_BREEDING_SORT_NAME.Bind();
+        public ILocalizedText PinnedPairsText { get; } = LocalizationCodes.LC_BREEDING_PINNED_PAIRS.Bind();
 
         public PalBreedingCatalogViewModel(CachedSaveGame cachedSave, PalDB palDb, PalBreedingDB breedingDb, GameSettings settings)
             : this(PrepareCatalogInput(cachedSave), palDb, breedingDb, settings, null)
@@ -160,6 +161,8 @@ namespace PalCalc.UI.ViewModel.Inspector
 
             foreach (var entry in AllEntries)
                 PropertyChangedEventManager.AddHandler(entry.Pal.Name, LocalizedNameChanged, nameof(ILocalizedText.Value));
+            PropertyChangedEventManager.AddHandler(FilterOwnedText, LocalizedProgressChanged, nameof(ILocalizedText.Value));
+            PropertyChangedEventManager.AddHandler(FilterBreedableText, LocalizedProgressChanged, nameof(ILocalizedText.Value));
 
             // Restore state from cache
             searchText = cachedState.SearchText ?? "";
@@ -187,15 +190,18 @@ namespace PalCalc.UI.ViewModel.Inspector
             GameSettings settings,
             CancellationToken cancellationToken = default)
         {
-            var input = PrepareCatalogInput(cachedSave);
-            var calculation = await Task.Run(
-                () => PalBreedingCatalogCalculationSession.Create(
-                    input.OwnedPals,
+            var (input, calculation) = await Task.Run(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var preparedInput = PrepareCatalogInput(cachedSave);
+                var preparedCalculation = PalBreedingCatalogCalculationSession.Create(
+                    preparedInput.OwnedPals,
                     palDb,
                     breedingDb,
-                    input.OwnedDataIsKnown,
-                    cancellationToken),
-                cancellationToken);
+                    preparedInput.OwnedDataIsKnown,
+                    cancellationToken);
+                return (preparedInput, preparedCalculation);
+            }, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             return new PalBreedingCatalogViewModel(input, palDb, breedingDb, settings, calculation);
         }
@@ -227,6 +233,14 @@ namespace PalCalc.UI.ViewModel.Inspector
                 return new CatalogInput(saveId, rawPals, true, CatalogScope.SinglePlayer, null);
 
             var mainPlayer = cachedSave.Players?.FirstOrDefault(p => p.Name == cachedSave.PlayerName);
+            if (mainPlayer == null &&
+                (string.IsNullOrWhiteSpace(cachedSave.PlayerName) ||
+                 string.Equals(cachedSave.PlayerName, "UNKNOWN", StringComparison.OrdinalIgnoreCase)))
+            {
+                // Dedicated/server metadata has no host player name. LevelSaveFile keeps the
+                // save owner's player first, which is also the owner used for global storage.
+                mainPlayer = cachedSave.Players?.FirstOrDefault();
+            }
             if (mainPlayer == null)
                 return new CatalogInput(saveId, new List<PalInstance>(), false, CatalogScope.Unresolved, null);
 
@@ -236,7 +250,7 @@ namespace PalCalc.UI.ViewModel.Inspector
             {
                 return new CatalogInput(
                     saveId,
-                    rawPals.Where(p => p.OwnerPlayerId == mainPlayer.PlayerId).ToList(),
+                    rawPals.Where(p => IsOwnedByPlayer(cachedSave, p, mainPlayer.PlayerId)).ToList(),
                     true,
                     CatalogScope.Player,
                     mainPlayer.Name);
@@ -244,8 +258,8 @@ namespace PalCalc.UI.ViewModel.Inspector
 
             var guildMemberIds = (playerGuild.MemberIds ?? new List<string> { mainPlayer.PlayerId }).ToHashSet();
             rawPals = rawPals.Where(p =>
-                (p.OwnerPlayerId != null && guildMemberIds.Contains(p.OwnerPlayerId)) ||
-                (p.Location?.ContainerId != null &&
+                (p?.OwnerPlayerId != null && guildMemberIds.Contains(p.OwnerPlayerId)) ||
+                (p?.Location?.ContainerId != null &&
                  cachedSave.GuildsByContainerId?.GetValueOrDefault(p.Location.ContainerId)?.Id == playerGuild.Id)
             ).ToList();
             return new CatalogInput(
@@ -254,6 +268,28 @@ namespace PalCalc.UI.ViewModel.Inspector
                 true,
                 CatalogScope.Guild,
                 playerGuild.Name ?? playerGuild.InternalName ?? playerGuild.Id);
+        }
+
+        private static bool IsOwnedByPlayer(CachedSaveGame cachedSave, PalInstance pal, string playerId)
+        {
+            if (pal == null || string.IsNullOrWhiteSpace(playerId))
+                return false;
+            if (string.Equals(pal.OwnerPlayerId, playerId, StringComparison.Ordinal))
+                return true;
+
+            var containerId = pal.Location?.ContainerId;
+            if (string.IsNullOrWhiteSpace(containerId))
+                return false;
+
+            var container = cachedSave.PalContainers?.FirstOrDefault(c => c?.Id == containerId);
+            return container switch
+            {
+                PalboxPalContainer pbc => pbc.PlayerId == playerId,
+                PlayerPartyContainer ppc => ppc.PlayerId == playerId,
+                DimensionalPalStorageContainer dpsc => dpsc.PlayerId == playerId,
+                GlobalPalStorageContainer gpsc => gpsc.PlayerId == playerId,
+                _ => false
+            };
         }
 
         private static ILocalizedText CreateScopeDescription(CatalogInput input) => input.Scope switch
@@ -320,24 +356,58 @@ namespace PalCalc.UI.ViewModel.Inspector
         {
             PinnedPairs.Clear();
             var ownedByInstanceId = activeOwnedPals
-                .Where(p => p != null && !string.IsNullOrWhiteSpace(p.InstanceId))
+                .Where(p => p?.Pal != null &&
+                            (p.Gender == PalGender.MALE || p.Gender == PalGender.FEMALE) &&
+                            !string.IsNullOrWhiteSpace(p.InstanceId) &&
+                            AllEntries.Any(entry => entry.Pal.ModelObject == p.Pal))
                 .GroupBy(p => p.InstanceId, StringComparer.Ordinal)
+                .Where(g =>
+                {
+                    var first = g.First();
+                    return g.Skip(1).All(p => PalBreedingCatalogCalculator.AreEquivalentOwnedRecords(first, p));
+                })
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
             var restoredKeys = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var key in PinnedPairKeys)
+            var keysToRemove = new List<string>();
+            var keysToAdd = new List<string>();
+            foreach (var key in PinnedPairKeys.ToList())
             {
-                var instanceIds = key?.Split('|');
-                if (instanceIds?.Length != 2 || !restoredKeys.Add(key))
+                if (!PalBreedingPairViewModel.TryParsePairKey(key, out var parent1Id, out var parent2Id))
+                {
+                    keysToRemove.Add(key);
                     continue;
-                if (!ownedByInstanceId.TryGetValue(instanceIds[0], out var parent1) ||
-                    !ownedByInstanceId.TryGetValue(instanceIds[1], out var parent2))
+                }
+                if (parent1Id == parent2Id)
+                {
+                    keysToRemove.Add(key);
+                    continue;
+                }
+                if (!ownedByInstanceId.TryGetValue(parent1Id, out var parent1) ||
+                    !ownedByInstanceId.TryGetValue(parent2Id, out var parent2))
                     continue;
 
-                PinnedPairs.Add(new PalBreedingPairViewModel(
+                var pair = new PalBreedingPairViewModel(
                     new PalBreedingPairResult { Parent1 = parent1, Parent2 = parent2 },
                     settings,
                     true,
-                    OnPairPinChanged));
+                    OnPairPinChanged);
+                if (!restoredKeys.Add(pair.PairKey))
+                    continue;
+
+                PinnedPairs.Add(pair);
+                if (key != pair.PairKey)
+                {
+                    keysToRemove.Add(key);
+                    keysToAdd.Add(pair.PairKey);
+                }
+            }
+
+            foreach (var key in keysToRemove)
+                PinnedPairKeys.Remove(key);
+            foreach (var key in keysToAdd)
+            {
+                if (!PinnedPairKeys.Contains(key))
+                    PinnedPairKeys.Add(key);
             }
             OnPropertyChanged(nameof(HasPinnedPairs));
         }
@@ -360,6 +430,7 @@ namespace PalCalc.UI.ViewModel.Inspector
                 PinnedPairs.Remove(PinnedPairs.FirstOrDefault(p => p.PairKey == pair.PairKey));
             }
 
+            SelectedDetails?.UpdatePinnedPairState(pair.PairKey, pair.IsPinned);
             OnPropertyChanged(nameof(HasPinnedPairs));
         }
 
@@ -420,6 +491,12 @@ namespace PalCalc.UI.ViewModel.Inspector
         {
             if (SelectedSort == PalCatalogSortOption.Name || !string.IsNullOrWhiteSpace(SearchText))
                 ApplyFilterAndSort();
+        }
+
+        private void LocalizedProgressChanged(object sender, PropertyChangedEventArgs args)
+        {
+            OnPropertyChanged(nameof(OwnedProgressDisplay));
+            OnPropertyChanged(nameof(BreedableProgressDisplay));
         }
     }
 }
