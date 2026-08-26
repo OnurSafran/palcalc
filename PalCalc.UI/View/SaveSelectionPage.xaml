@@ -109,7 +109,14 @@
 
     </UserControl.Resources>
 
-    <GroupBox MaxWidth="1500"
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+    <GroupBox Grid.Row="0"
+              MaxWidth="1500"
               MaxHeight="700"
               Header="{itl:LocalizedText LC_PALWORLD_SAVE_FILES}"
               BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer1BorderBrush}}"
@@ -384,4 +391,19 @@
             </Grid>
         </Grid>
     </GroupBox>
+
+        <Border Grid.Row="1"
+                Margin="0,8,0,0"
+                Padding="8"
+                Background="{DynamicResource {x:Static adonisUi:Brushes.Layer1BackgroundBrush}}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Need to manage Your Pals data from an unavailable save?"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0" />
+                <Button Content="Manage orphaned Your Pals documents"
+                        Command="{Binding OpenOrphanedDocumentsCommand}"
+                        Padding="8,3" />
+            </StackPanel>
+        </Border>
+    </Grid>
 </UserControl>

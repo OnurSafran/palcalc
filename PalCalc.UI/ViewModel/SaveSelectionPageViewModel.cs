@@ -23,6 +23,7 @@ namespace PalCalc.UI.ViewModel
         public IReadOnlyCollection<SavesCollectionViewModel> AvailableSaveGameCollections { get; }
 
         public IRelayCommand<SaveGameViewModel> LoadSaveCommand { get; }
+        public IRelayCommand OpenOrphanedDocumentsCommand { get; }
 
         [ObservableProperty]
         private SavesCollectionViewModel selectedCollection;
@@ -38,11 +39,15 @@ namespace PalCalc.UI.ViewModel
 
         public SaveSelectionPageViewModel(
             IEnumerable<SavesCollectionViewModel> savesCollections,
-            IRelayCommand<SaveGameViewModel> loadSaveCommand
+            IRelayCommand<SaveGameViewModel> loadSaveCommand,
+            Action openOrphanedDocuments = null
         )
         {
             AvailableSaveGameCollections = [.. savesCollections];
             LoadSaveCommand = loadSaveCommand;
+            OpenOrphanedDocumentsCommand = new RelayCommand(
+                () => openOrphanedDocuments?.Invoke(),
+                () => openOrphanedDocuments != null);
         }
 
         protected override void OnPropertyChanged(PropertyChangedEventArgs e)
@@ -67,7 +72,8 @@ namespace PalCalc.UI.ViewModel
             {
                 foreach (var save in loc.AvailableSaves)
                 {
-                    if (CachedSaveGame.IdentifierFor(save.Value) == id)
+                    var identity = SaveIdentity.From(save.Value);
+                    if (identity.StorageKey == id)
                     {
                         SelectedCollection = loc;
                         SelectedSave = save;

@@ -34,6 +34,7 @@ namespace PalCalc.UI.ViewModel
         private ISavesService savesService;
         private PalDB db;
         private Dispatcher dispatcher;
+        private readonly SavePalsSessionManager yourPalsSessions = new();
 
         [ObservableProperty]
         private bool showToolbar = false;
@@ -87,7 +88,8 @@ namespace PalCalc.UI.ViewModel
             Storage.SaveAppSettings(settings);
         }
 
-        private bool CanBeginNavigateSaveSelectionPage() => Content is SolverPage;
+        private bool CanBeginNavigateSaveSelectionPage() =>
+            Content is SolverPage || Content is YourPalsOrphanedDocumentsPage;
 
         [RelayCommand(CanExecute = nameof(CanBeginNavigateSaveSelectionPage))]
         private void BeginNavigateSaveSelectionPage()
@@ -162,9 +164,15 @@ namespace PalCalc.UI.ViewModel
 
         private void NavigateSaveSelectionPage(IEnumerable<SavesCollectionViewModel> collections)
         {
+            var collectionList = collections.ToList();
+            yourPalsSessions.SetAvailableSaves(collectionList
+                .SelectMany(collection => collection.AvailableSaves)
+                .Select(save => save.Value));
+
             var vm = new SaveSelectionPageViewModel(
-                savesCollections: collections,
-                loadSaveCommand: new RelayCommand<SaveGameViewModel>(NavigateSolverPage)
+                savesCollections: collectionList,
+                loadSaveCommand: new RelayCommand<SaveGameViewModel>(NavigateSolverPage),
+                openOrphanedDocuments: NavigateOrphanedDocuments
             );
 
             var page = new SaveSelectionPage();
@@ -178,6 +186,18 @@ namespace PalCalc.UI.ViewModel
             Content = page;
         }
 
+        private void NavigateOrphanedDocuments()
+        {
+            Content = new YourPalsOrphanedDocumentsPage
+            {
+                DataContext = new YourPalsViewModel(
+                    session: null,
+                    dispatcher: dispatcher,
+                    orphanedDocumentManager: yourPalsSessions,
+                    navigateBack: () => BeginNavigateSaveSelectionPageCommand.Execute(null)),
+            };
+        }
+
         private void NavigateSolverPage(SaveGameViewModel selectedSave)
         {
             settings.SelectedGameIdentifier = CachedSaveGame.IdentifierFor(selectedSave.Value);
@@ -188,8 +208,21 @@ namespace PalCalc.UI.ViewModel
             if (parsedSave == null)
                 return;
 
+            // Keep the save-owned Your Pals session at app-window scope so it survives
+            // solver-page disposal and can refresh independently of page lifetime.
+            var yourPalsSession = yourPalsSessions.Activate(
+                selectedSave.Parent.SourceLocation,
+                selectedSave.Value,
+                parsedSave);
+
             var saveOperations = new CommonSaveOperationsViewModel(BeginNavigateSaveSelectionPageCommand, selectedSave.Parent, selectedSave);
-            var vm = new SolverPageViewModel(Dispatcher.CurrentDispatcher, saveOperations, selectedSave, LoadPalTargets(selectedSave));
+            var vm = new SolverPageViewModel(
+                Dispatcher.CurrentDispatcher,
+                saveOperations,
+                selectedSave,
+                LoadPalTargets(selectedSave),
+                yourPalsSession,
+                yourPalsSessions);
             Content = new SolverPage(vm);
         }
 
@@ -217,6 +250,11 @@ namespace PalCalc.UI.ViewModel
                 if (Content is SolverPage sp)
                 {
                     var vm = sp.DataContext as SolverPageViewModel;
+                    vm.Dispose();
+                }
+                else if (Content is YourPalsOrphanedDocumentsPage page &&
+                    page.DataContext is IDisposable vm)
+                {
                     vm.Dispose();
                 }
             }

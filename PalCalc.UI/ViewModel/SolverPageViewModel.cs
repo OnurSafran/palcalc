@@ -58,6 +58,7 @@ namespace PalCalc.UI.ViewModel
         private Dispatcher dispatcher;
         private AppSettings settings;
         private PassiveSkillsPresetCollectionViewModel passivePresets;
+        private readonly SavePalsSession yourPalsSession;
         private IRelayCommand<PalSpecifierViewModel> deletePalTargetCommand;
         private ExitEventHandler appExitHandler;
         private CancelEventHandler mainWindowClosingHandler;
@@ -82,6 +83,8 @@ namespace PalCalc.UI.ViewModel
         private PalBreedingCatalogViewModel catalog;
         [ObservableProperty]
         private bool isCatalogLoading;
+
+        public YourPalsViewModel YourPals { get; }
 
         [ObservableProperty]
         private bool showNoResultsNotice = false;
@@ -108,10 +111,24 @@ namespace PalCalc.UI.ViewModel
         public CommonSaveOperationsViewModel SaveOperations { get; }
 
         // main app model
-        public SolverPageViewModel(Dispatcher dispatcher, CommonSaveOperationsViewModel saveOperations, SaveGameViewModel selectedSave, PalTargetListViewModel targets)
+        public SolverPageViewModel(
+            Dispatcher dispatcher,
+            CommonSaveOperationsViewModel saveOperations,
+            SaveGameViewModel selectedSave,
+            PalTargetListViewModel targets,
+            SavePalsSession yourPalsSession = null,
+            SavePalsSessionManager yourPalsSessionManager = null)
         {
             this.dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
             OpenedSave = selectedSave;
+            this.yourPalsSession = yourPalsSession;
+            YourPals = new YourPalsViewModel(
+                yourPalsSession,
+                this.dispatcher,
+                yourPalsSessionManager);
+            YourPals.PropertyChanged += YourPals_PropertyChanged;
+            if (yourPalsSession != null)
+                yourPalsSession.Refreshed += YourPalsSession_Refreshed;
 
             SaveOperations = saveOperations.WithNavigateCondition(() => SolverQueue.QueuedItems.Count == 0);
 
@@ -207,6 +224,11 @@ namespace PalCalc.UI.ViewModel
         {
             catalogLoadCancellation?.Cancel();
             Catalog?.CancelPendingDetails();
+            if (yourPalsSession != null)
+                yourPalsSession.Refreshed -= YourPalsSession_Refreshed;
+            if (YourPals != null)
+                YourPals.PropertyChanged -= YourPals_PropertyChanged;
+            YourPals?.Dispose();
             Storage.SaveReloaded -= Storage_SaveReloaded;
             CachedSaveGame.SaveFileLoadEnd -= CachedSaveGame_SaveFileLoadEnd;
 
@@ -422,13 +444,17 @@ namespace PalCalc.UI.ViewModel
 
             var originalSolverSettings = SolverControls.AsModel;
             var originalGameSettings = SelectedGameSettings.ModelObject;
+            // The two stores are intentionally independent. Selecting Your Pals is
+            // an explicit solver-source switch; it never imports or merges Inspect
+            // custom-container entries into the save-scoped Your Pals document.
+            var solverSource = GetSolverSource();
             var job = new SolverJobViewModel(
                 dispatcher,
                 new BreedingSolverRequest(
                     currentSpec.ModelObject,
                     SolverControls.ConfiguredSolverSettings(
                         originalGameSettings,
-                        PalTargetList.SourcePals.AvailablePals.ToList()
+                        solverSource.ToList()
                     )
                 ),
                 currentSpec,
@@ -485,6 +511,49 @@ namespace PalCalc.UI.ViewModel
 
             SolverQueue.Run(currentSpec);
         }
+
+        private void YourPalsSession_Refreshed(object sender, EventArgs e)
+        {
+            if (!YourPals.UseAsSolverSource)
+                return;
+
+            InvalidateYourPalsSolverState();
+        }
+
+        private void YourPals_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(YourPalsViewModel.UseAsSolverSource))
+                return;
+
+            InvalidateYourPalsSolverState();
+        }
+
+        private void InvalidateYourPalsSolverState()
+        {
+            void Invalidate()
+            {
+                foreach (var target in SolverQueue.QueuedItems.ToList())
+                    target.LatestJob?.Cancel();
+
+                if (PalTargetList != null)
+                {
+                    foreach (var target in PalTargetList.Targets)
+                        target.CurrentResults = null;
+                }
+
+                ShowNoResultsNotice = false;
+            }
+
+            if (dispatcher.CheckAccess())
+                Invalidate();
+            else
+                dispatcher.BeginInvoke(Invalidate, DispatcherPriority.DataBind);
+        }
+
+        private IReadOnlyList<PalInstance> GetSolverSource() =>
+            YourPals?.UseAsSolverSource == true
+                ? YourPals.SolverSource.Pals
+                : PalTargetList.SourcePals.AvailablePals.ToList();
 
         private void CancelSolver()
         {

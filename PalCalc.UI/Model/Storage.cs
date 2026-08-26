@@ -19,6 +19,8 @@ namespace PalCalc.UI.Model
         private static ILogger logger = Log.ForContext(typeof(Storage));
 
         public static event Action<ISaveGame> SaveReloaded;
+        public static event Action<ISavesLocation, ISaveGame, CachedSaveGame> SaveReloadedWithCache;
+        public static event Action<ISaveGame> SaveRemoved;
 
         // (debug-only setting)
         public static readonly bool DEBUG_DisableStorage = false;
@@ -65,6 +67,13 @@ namespace PalCalc.UI.Model
         {
             Init();
             return Path.Combine(SaveFileDataPath(forSaveFile), "custom-containers.json");
+        }
+
+        // Your Pals is a separate save-owned document.
+        public static string YourPalsDocumentPath(ISaveGame forSaveFile)
+        {
+            Init();
+            return Path.Combine(SaveFileDataPath(forSaveFile), YourPalsContract.DocumentFileName);
         }
 
         private static bool didInit = false;
@@ -139,7 +148,20 @@ namespace PalCalc.UI.Model
             {
                 var dataPath = SaveFileDataPath(save);
                 if (Directory.Exists(dataPath))
-                    Directory.Delete(dataPath, true);
+                {
+                    foreach (var file in Directory.EnumerateFiles(dataPath))
+                    {
+                        var fileName = Path.GetFileName(file);
+                        if (string.Equals(fileName, YourPalsContract.DocumentFileName, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(fileName, YourPalsContract.DocumentFileName + ".bak", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        File.Delete(file);
+                    }
+
+                    foreach (var directory in Directory.EnumerateDirectories(dataPath))
+                        Directory.Delete(directory, true);
+                }
             }
             catch (Exception ex)
             {
@@ -303,6 +325,7 @@ namespace PalCalc.UI.Model
 
             CrashSupport.RemoveReferences(save);
             ClearForSave(save);
+            SaveRemoved?.Invoke(save);
         }
 
         public static void ReloadSave(ISavesLocation containerLocation, ISaveGame save, PalDB db, GameSettings settings)
@@ -312,6 +335,8 @@ namespace PalCalc.UI.Model
             if (save == null) return;
 
             CrashSupport.ReferencedSave(save);
+
+            CachedSaveGame refreshedCachedSave = null;
 
             lock (InMemorySaves)
             {
@@ -359,10 +384,14 @@ namespace PalCalc.UI.Model
                     }
 
                     InMemorySaves[identifier] = originalCachedSave ?? newCachedSave;
+                    refreshedCachedSave = InMemorySaves[identifier];
 
                     SaveReloaded?.Invoke(save);
                 }
             }
+
+            if (refreshedCachedSave != null)
+                SaveReloadedWithCache?.Invoke(containerLocation, save, refreshedCachedSave);
         }
 
         #endregion

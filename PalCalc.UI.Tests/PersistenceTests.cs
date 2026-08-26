@@ -20,6 +20,135 @@ namespace PalCalc.UI.Tests
     [TestClass]
     public class PersistenceTests
     {
+
+    [TestMethod]
+    public void MissingPalRemainsInItsGroupWhenTheSourceNoLongerContainsIt()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var owner = new SaveIdentity("user-1", "save-1");
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, YourPalsContract.DocumentFileName));
+            var loaded = store.CreateNew(owner);
+            var document = new YourPalsDocument
+            {
+                OwnerSaveIdentity = owner,
+                Groups =
+                [
+                    new YourPalsGroup
+                    {
+                        GroupId = "group-1",
+                        Name = "Favorites",
+                        Members =
+                        [
+                            YourPalsMember.Imported(
+                                new ImportedPalReference
+                                {
+                                    SourceIdentity = SourceIdentity.ForSave(owner),
+                                    SourceKey = "palbox-1:3",
+                                    InstanceId = "missing-instance",
+                                    LastKnownInternalName = "Pal_Internal",
+                                },
+                                "entry-1"),
+                        ],
+                    },
+                ],
+            };
+
+            store.Save(loaded, document);
+
+            var reloaded = store.Load(owner);
+            var member = reloaded.Document.Groups.Single().Members.Single();
+            var resolved = PalReferenceResolver.Resolve(member, []);
+
+            Assert.AreEqual(YourPalsEntryStatus.Stale, resolved.Status);
+            Assert.AreEqual("entry-1", member.PalEntryKey);
+            Assert.HasCount(1, reloaded.Document.Groups.Single().Members);
+        });
+    }
+
+    [TestMethod]
+    public void CorruptYourPalsDocumentCannotBeReplacedByAnEmptyFallback()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var documentPath = Path.Combine(path, YourPalsContract.DocumentFileName);
+            var corruptContents = "{ \"documentType\": \"your-pals\", \"documentVersion\": 1";
+            File.WriteAllText(documentPath, corruptContents);
+
+            var owner = new SaveIdentity("user-1", "save-1");
+            var store = new YourPalsDocumentStore(documentPath);
+            var loaded = store.Load(owner);
+
+            Assert.AreEqual(YourPalsRecoveryState.CorruptReadOnly, loaded.RecoveryState);
+            Assert.IsFalse(loaded.CanPersistSafely);
+            Assert.Throws<InvalidOperationException>(() =>
+                store.Save(loaded, YourPalsDocument.Empty(owner)));
+            Assert.AreEqual(corruptContents, File.ReadAllText(documentPath));
+        });
+    }
+
+    [TestMethod]
+    public void UnknownYourPalsMemberKindsAndFieldsSurviveRoundTrip()
+    {
+        var json = """
+        {
+          "documentType": "your-pals",
+          "documentVersion": 1,
+          "ownerSaveIdentity": { "userId": "user-1", "gameId": "save-1" },
+          "groups": [
+            {
+              "groupId": "group-1",
+              "name": "Favorites",
+              "order": 0,
+              "members": [
+                {
+                  "palEntryKey": "entry-1",
+                  "kind": "future-reference",
+                  "sourceIdentity": {
+                    "kind": "save",
+                    "scope": "6:user-16:save-1",
+                    "futureSourceValue": { "keep": true }
+                  },
+                  "futureMemberValue": { "keep": true }
+                }
+              ]
+            }
+          ],
+          "manualDefinitions": []
+        }
+        """;
+
+        var document = YourPalsDocumentJsonSerializer.ToRuntime(
+            YourPalsDocumentJsonSerializer.FromCurrentJson(json));
+        var roundTripped = JObject.Parse(YourPalsDocumentJsonSerializer.ToJson(document));
+        var roundTrippedMember = roundTripped["groups"]![0]!["members"]![0]!;
+        var futureValueWasPreserved = roundTrippedMember["futureMemberValue"]?["keep"]?.Value<bool>() ?? false;
+        var futureSourceValueWasPreserved = roundTrippedMember["sourceIdentity"]?["futureSourceValue"]?["keep"]?.Value<bool>() ?? false;
+
+        Assert.AreEqual("future-reference", roundTrippedMember["kind"]?.Value<string>());
+        Assert.IsTrue(futureValueWasPreserved);
+        Assert.IsTrue(futureSourceValueWasPreserved);
+    }
+
+    [TestMethod]
+    public void SerializerDoesNotWriteAnOlderDocumentWithoutExplicitMigration()
+    {
+        var dto = YourPalsDocumentJsonSerializer.FromCurrentJson(
+            """
+            {
+              "documentType": "your-pals",
+              "documentVersion": 0,
+              "ownerSaveIdentity": {"userId": "user-1", "gameId": "save-1"},
+              "groups": [],
+              "manualDefinitions": []
+            }
+            """);
+
+        Assert.Throws<JsonSerializationException>(() =>
+            YourPalsDocumentJsonSerializer.ToRuntime(dto));
+    }
+
     [TestMethod]
     public void FreshStorageReceivesCurrentManifest()
     {
@@ -371,6 +500,21 @@ namespace PalCalc.UI.Tests
 
             Assert.AreEqual("original", File.ReadAllText(file + ".bak"));
             Assert.AreEqual("retry", File.ReadAllText(file));
+        });
+    }
+
+    [TestMethod]
+    public void YourPalsBackupTracksThePreviousKnownGoodDocument()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var file = Path.Combine(path, YourPalsContract.DocumentFileName);
+
+            StorageFile.WriteAtomic(file, "first", backup: true, preserveExistingBackup: false);
+            StorageFile.WriteAtomic(file, "second", backup: true, preserveExistingBackup: false);
+
+            Assert.AreEqual("first", File.ReadAllText(file + ".bak"));
+            Assert.AreEqual("second", File.ReadAllText(file));
         });
     }
 

@@ -10,7 +10,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -144,13 +143,7 @@ namespace PalCalc.UI.Model
 
         public static string IdentifierFor(ISaveGame game)
         {
-            var invalidChars = Path.GetInvalidFileNameChars();
-            var sb = new StringBuilder();
-
-            foreach (var c in $"{game.UserId}-{game.GameId}")
-                if (!invalidChars.Contains(c)) sb.Append(c);
-
-            return sb.ToString();
+            return SaveIdentity.From(game).StorageKey;
         }
 
         private static CachedSaveGame sampleForDesignerView;

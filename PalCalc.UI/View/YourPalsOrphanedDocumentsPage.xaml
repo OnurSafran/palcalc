@@ -1,0 +1,71 @@
+<UserControl x:Class="PalCalc.UI.View.YourPalsOrphanedDocumentsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:PalCalc.UI.ViewModel"
+             xmlns:c="clr-namespace:PalCalc.UI.ViewModel.Converters"
+             xmlns:adonisUi="clr-namespace:AdonisUI;assembly=AdonisUI"
+             mc:Ignorable="d"
+             d:DataContext="{x:Static vm:YourPalsViewModel.DesignerInstance}">
+    <UserControl.Resources>
+        <c:ValueVisibilityConverter x:Key="VVC" />
+        <c:ValueVisibilityConverter x:Key="VVC_Negate" Negate="True" />
+    </UserControl.Resources>
+
+    <Border Padding="10">
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Back to save selection"
+                            Command="{Binding BackCommand}"
+                            Padding="8,3"
+                            Margin="0,0,10,0" />
+                    <TextBlock Text="Orphaned Your Pals documents"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="These documents belong to saves that are not currently available. They are kept separate from active saves and can be deleted only with explicit confirmation."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
+                           Margin="0,5,0,0" />
+                <TextBlock Text="{Binding OrphanedDocumentCountText}"
+                           Margin="0,5,0,0" />
+            </StackPanel>
+
+            <Grid>
+                <ListView ItemsSource="{Binding OrphanedDocuments}"
+                          SelectedItem="{Binding SelectedOrphanedDocument, Mode=TwoWay}"
+                          BorderThickness="0"
+                          Background="Transparent"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          Visibility="{Binding HasOrphanedDocuments, Converter={StaticResource VVC}}">
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="False">
+                            <GridViewColumn Header="Owner" DisplayMemberBinding="{Binding OwnerLabel}" Width="180" />
+                            <GridViewColumn Header="Reason" DisplayMemberBinding="{Binding Reason}" Width="360" />
+                            <GridViewColumn Header="Document" DisplayMemberBinding="{Binding DocumentPath}" Width="600" />
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <TextBlock Text="No orphaned Your Pals documents were found. Click Refresh to scan again."
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding HasOrphanedDocuments, Converter={StaticResource VVC_Negate}}" />
+            </Grid>
+
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+                <Button Content="Refresh"
+                        Command="{Binding RefreshOrphanedDocumentsCommand}"
+                        Padding="8,3"
+                        Margin="0,0,5,0" />
+                <Button Content="Delete selected orphan"
+                        Command="{Binding DeleteSelectedOrphanedDocumentCommand}"
+                        Padding="8,3" />
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</UserControl>

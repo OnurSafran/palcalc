@@ -137,6 +137,8 @@ namespace PalCalc.UI.ViewModel.Mapped
 
                 if (currentResults != null)
                     WeakEventManager<BreedingResultListViewModel, EventArgs>.AddHandler(currentResults, nameof(currentResults.CheckedStateChanged), CurrentResults_CheckedStateChanged);
+
+                OnPropertyChanged(nameof(CurrentResults));
             }
         }
 

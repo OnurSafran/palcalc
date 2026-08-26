@@ -78,7 +78,11 @@ namespace PalCalc.UI.Persistence
 
     internal static class StorageFile
     {
-        public static void WriteAtomic(string path, string contents, bool backup)
+        public static void WriteAtomic(
+            string path,
+            string contents,
+            bool backup,
+            bool preserveExistingBackup = true)
         {
             var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory))
@@ -97,8 +101,7 @@ namespace PalCalc.UI.Persistence
                     stream.Flush(flushToDisk: true);
                 }
 
-                // Keep the first pre-migration copy across retries and later migration steps.
-                if (backup && File.Exists(path) && !File.Exists(backupPath))
+                if (backup && File.Exists(path) && (!preserveExistingBackup || !File.Exists(backupPath)))
                     File.Copy(path, backupPath, overwrite: true);
 
                 File.Move(tempPath, path, overwrite: true);

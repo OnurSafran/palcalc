@@ -290,6 +290,10 @@
                     </Grid>
                 </TabItem>
 
+                <TabItem Header="Your Pals">
+                    <uiv:YourPalsView DataContext="{Binding YourPals}" />
+                </TabItem>
+
                 <TabItem Header="{itl:LocalizedText LC_MAIN_TAB_PAL_CATALOG}">
                     <Grid Margin="0,5,0,0">
                         <inspectorView:PalBreedingCatalogView DataContext="{Binding Catalog}" />

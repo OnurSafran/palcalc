@@ -226,70 +226,19 @@ namespace PalCalc.UI.ViewModel.Inspector
             var saveId = cachedSave?.UnderlyingSave != null
                 ? CachedSaveGame.IdentifierFor(cachedSave.UnderlyingSave)
                 : "designer";
-            var rawPals = cachedSave?.OwnedPals?.ToList() ?? new List<PalInstance>();
-            if (cachedSave == null)
-                return new CatalogInput(saveId, rawPals, false, CatalogScope.Unresolved, null);
-            if (!cachedSave.IsServerSave)
-                return new CatalogInput(saveId, rawPals, true, CatalogScope.SinglePlayer, null);
-
-            var mainPlayer = cachedSave.Players?.FirstOrDefault(p => p.Name == cachedSave.PlayerName);
-            if (mainPlayer == null &&
-                (string.IsNullOrWhiteSpace(cachedSave.PlayerName) ||
-                 string.Equals(cachedSave.PlayerName, "UNKNOWN", StringComparison.OrdinalIgnoreCase)))
-            {
-                // Dedicated/server metadata has no host player name. LevelSaveFile keeps the
-                // save owner's player first, which is also the owner used for global storage.
-                mainPlayer = cachedSave.Players?.FirstOrDefault();
-            }
-            if (mainPlayer == null)
-                return new CatalogInput(saveId, new List<PalInstance>(), false, CatalogScope.Unresolved, null);
-
-            var playerGuild = cachedSave.Guilds?
-                .FirstOrDefault(g => g?.MemberIds?.Contains(mainPlayer.PlayerId) == true);
-            if (playerGuild == null)
-            {
-                return new CatalogInput(
-                    saveId,
-                    rawPals.Where(p => IsOwnedByPlayer(cachedSave, p, mainPlayer.PlayerId)).ToList(),
-                    true,
-                    CatalogScope.Player,
-                    mainPlayer.Name);
-            }
-
-            var guildMemberIds = (playerGuild.MemberIds ?? new List<string> { mainPlayer.PlayerId }).ToHashSet();
-            rawPals = rawPals.Where(p =>
-                (p?.OwnerPlayerId != null && guildMemberIds.Contains(p.OwnerPlayerId)) ||
-                (p?.Location?.ContainerId != null &&
-                 cachedSave.GuildsByContainerId?.GetValueOrDefault(p.Location.ContainerId)?.Id == playerGuild.Id)
-            ).ToList();
+            var scope = YourPalsOwnershipScope.Resolve(cachedSave);
             return new CatalogInput(
                 saveId,
-                rawPals,
-                true,
-                CatalogScope.Guild,
-                playerGuild.Name ?? playerGuild.InternalName ?? playerGuild.Id);
-        }
-
-        private static bool IsOwnedByPlayer(CachedSaveGame cachedSave, PalInstance pal, string playerId)
-        {
-            if (pal == null || string.IsNullOrWhiteSpace(playerId))
-                return false;
-            if (string.Equals(pal.OwnerPlayerId, playerId, StringComparison.Ordinal))
-                return true;
-
-            var containerId = pal.Location?.ContainerId;
-            if (string.IsNullOrWhiteSpace(containerId))
-                return false;
-
-            var container = cachedSave.PalContainers?.FirstOrDefault(c => c?.Id == containerId);
-            return container switch
-            {
-                PalboxPalContainer pbc => pbc.PlayerId == playerId,
-                PlayerPartyContainer ppc => ppc.PlayerId == playerId,
-                DimensionalPalStorageContainer dpsc => dpsc.PlayerId == playerId,
-                GlobalPalStorageContainer gpsc => gpsc.PlayerId == playerId,
-                _ => false
-            };
+                scope.FilterPals(cachedSave).ToList(),
+                scope.OwnedDataIsKnown,
+                scope.Kind switch
+                {
+                    YourPalsScopeKind.SinglePlayer => CatalogScope.SinglePlayer,
+                    YourPalsScopeKind.Guild => CatalogScope.Guild,
+                    YourPalsScopeKind.Player => CatalogScope.Player,
+                    _ => CatalogScope.Unresolved,
+                },
+                scope.ScopeName);
         }
 
         private static ILocalizedText CreateScopeDescription(CatalogInput input) => input.Scope switch

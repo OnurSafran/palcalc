@@ -1,0 +1,313 @@
+<UserControl x:Class="PalCalc.UI.View.YourPalsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:PalCalc.UI.ViewModel"
+             xmlns:model="clr-namespace:PalCalc.UI.Model"
+             xmlns:c="clr-namespace:PalCalc.UI.ViewModel.Converters"
+             xmlns:adonisUi="clr-namespace:AdonisUI;assembly=AdonisUI"
+             d:DataContext="{x:Static vm:YourPalsViewModel.DesignerInstance}"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <c:ValueVisibilityConverter x:Key="VVC" />
+        <c:ValueVisibilityConverter x:Key="VVC_Negate" Negate="True" />
+
+        <Style x:Key="StatusTextStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static model:YourPalsEntryStatus.Resolved}">
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.SuccessBrush}}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static model:YourPalsEntryStatus.Stale}">
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static model:YourPalsEntryStatus.Conflict}">
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.ErrorBrush}}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static model:YourPalsEntryStatus.Invalid}">
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.ErrorBrush}}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static model:YourPalsEntryStatus.Unresolved}">
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Padding="5">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Your Pals" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding SaveScope, StringFormat=Save scope: {0}}"
+                               Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding SessionState, StringFormat=Session: {0}}" Margin="0,0,10,0" />
+                    <TextBlock Text="{Binding SourceState, StringFormat=Source: {0}}" Margin="0,0,10,0" />
+                    <CheckBox Content="Use as solver source"
+                              IsChecked="{Binding UseAsSolverSource, Mode=TwoWay}"
+                              VerticalAlignment="Center"
+                              Margin="0,0,10,0" />
+                    <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="10,3" />
+                    <Button Content="Discard &amp; reload"
+                            Command="{Binding DiscardChangesAndReloadCommand}"
+                            Padding="10,3"
+                            Margin="5,0,0,0" />
+                </StackPanel>
+            </Grid>
+
+            <WrapPanel Grid.Row="1" Margin="0,0,0,5" VerticalAlignment="Center">
+                <TextBox Width="210"
+                         Margin="0,0,5,0"
+                         Padding="5,3"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="Search saved members" />
+                <ComboBox Width="125"
+                          Margin="0,0,5,0"
+                          ItemsSource="{Binding StatusFilterOptions}"
+                          DisplayMemberPath="Label"
+                          SelectedValuePath="Value"
+                          SelectedValue="{Binding SelectedStatusFilter, Mode=TwoWay}" />
+                <ComboBox Width="150"
+                          Margin="0,0,5,0"
+                          ItemsSource="{Binding GroupFilterOptions}"
+                          DisplayMemberPath="Label"
+                          SelectedItem="{Binding SelectedGroupFilter, Mode=TwoWay}" />
+                <ComboBox Width="105"
+                          Margin="0,0,5,0"
+                          ItemsSource="{Binding SortOptions}"
+                          DisplayMemberPath="Label"
+                          SelectedValuePath="Value"
+                          SelectedValue="{Binding SelectedSortField, Mode=TwoWay}" />
+                <Button Content="{Binding SortDirectionText}"
+                        Command="{Binding ToggleSortDirectionCommand}"
+                        Padding="8,3"
+                        Margin="0,0,5,0" />
+                <Button Content="Clear"
+                        Command="{Binding ClearQueryCommand}"
+                        Padding="8,3"
+                        Margin="0,0,10,0" />
+                <TextBlock Text="{Binding EntryCountText, StringFormat=Showing: {0}}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+            </WrapPanel>
+
+            <WrapPanel Grid.Row="2" Margin="0,0,0,5" VerticalAlignment="Center">
+                <TextBox Width="145"
+                         Margin="0,0,5,0"
+                         Padding="5,3"
+                         Text="{Binding NewGroupName, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="New group name" />
+                <Button Content="Create group" Command="{Binding CreateGroupCommand}" Padding="8,3" Margin="0,0,5,0" />
+                <TextBox Width="145"
+                         Margin="0,0,5,0"
+                         Padding="5,3"
+                         Text="{Binding RenameGroupName, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="Selected group name" />
+                <Button Content="Rename" Command="{Binding RenameGroupCommand}" Padding="8,3" Margin="0,0,5,0" />
+                <Button Content="↑" Command="{Binding MoveGroupUpCommand}" Padding="8,3" Margin="0,0,2,0" ToolTip="Move group up" />
+                <Button Content="↓" Command="{Binding MoveGroupDownCommand}" Padding="8,3" Margin="0,0,5,0" ToolTip="Move group down" />
+                <Button Content="Delete group" Command="{Binding DeleteGroupCommand}" Padding="8,3" Margin="0,0,10,0" />
+                <TextBox Width="145"
+                         Margin="0,0,5,0"
+                         Padding="5,3"
+                         Text="{Binding ManualInternalName, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="Manual Pal internal name" />
+                <Button Content="Add manual" Command="{Binding AddManualDefinitionCommand}" Padding="8,3" Margin="0,0,2,0" />
+                <Button Content="Update manual" Command="{Binding UpdateManualDefinitionCommand}" Padding="8,3" Margin="0,0,5,0" />
+                <Button Content="Add source" Command="{Binding AddSelectedSourceCommand}" Padding="8,3" Margin="0,0,2,0" />
+                <Button Content="Rebind" Command="{Binding RebindSelectedEntryCommand}" Padding="8,3" Margin="0,0,2,0" />
+                <Button Content="Resolve matching" Command="{Binding BulkRebindMatchingMembersCommand}" Padding="8,3" Margin="0,0,2,0" />
+                <Button Content="Remove duplicates" Command="{Binding RemoveDuplicateMembersCommand}" Padding="8,3" Margin="0,0,2,0" />
+                <Button Content="Remove member" Command="{Binding RemoveSelectedEntryCommand}" Padding="8,3" Margin="0,0,5,0" />
+                <Button Content="Create document" Command="{Binding CreateDocumentCommand}" Padding="8,3" Margin="0,0,5,0" />
+                <Button Content="Repair recovered" Command="{Binding RepairRecoveredDocumentCommand}" Padding="8,3" Margin="0,0,5,0" />
+                <Button Content="Save" Command="{Binding SaveCommand}" Padding="8,3" Margin="0,0,10,0" />
+                <TextBlock Text="{Binding EditStatus}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </WrapPanel>
+
+            <Expander Grid.Row="3"
+                      Header="Recovery details"
+                      IsExpanded="False"
+                      Visibility="{Binding HasDiagnostics, Converter={StaticResource VVC}}"
+                      Margin="0,0,0,5">
+                <StackPanel>
+                    <TextBlock Text="{Binding RecoveryGuidance}"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,5"
+                               Visibility="{Binding RecoveryGuidance, Converter={StaticResource VVC}}" />
+                    <ListBox ItemsSource="{Binding Diagnostics}"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             MaxHeight="100">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,2" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Expander>
+
+            <Expander Grid.Row="4"
+                      Header="{Binding OrphanedDocumentCountText}"
+                      IsExpanded="False"
+                      Visibility="{Binding HasOrphanedDocuments, Converter={StaticResource VVC}}"
+                      Margin="0,0,0,5">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ListView Grid.Row="0"
+                              ItemsSource="{Binding OrphanedDocuments}"
+                              SelectedItem="{Binding SelectedOrphanedDocument, Mode=TwoWay}"
+                              MaxHeight="120"
+                              BorderThickness="0"
+                              Background="Transparent"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                        <ListView.View>
+                            <GridView AllowsColumnReorder="False">
+                                <GridViewColumn Header="Owner" DisplayMemberBinding="{Binding OwnerLabel}" Width="160" />
+                                <GridViewColumn Header="Reason" DisplayMemberBinding="{Binding Reason}" Width="300" />
+                                <GridViewColumn Header="Document" DisplayMemberBinding="{Binding DocumentPath}" Width="500" />
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
+                        <Button Content="Refresh orphaned"
+                                Command="{Binding RefreshOrphanedDocumentsCommand}"
+                                Padding="8,3"
+                                Margin="0,0,5,0" />
+                        <Button Content="Delete selected orphan"
+                                Command="{Binding DeleteSelectedOrphanedDocumentCommand}"
+                                Padding="8,3" />
+                    </StackPanel>
+                </Grid>
+            </Expander>
+
+            <Grid Grid.Row="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="230" MinWidth="180" />
+                    <ColumnDefinition Width="5" />
+                    <ColumnDefinition Width="*" MinWidth="360" />
+                </Grid.ColumnDefinitions>
+
+                <GroupBox Grid.Column="0" Header="Groups">
+                    <ListView ItemsSource="{Binding Groups}"
+                              SelectedItem="{Binding SelectedGroupSummary, Mode=TwoWay}"
+                              BorderThickness="0"
+                              Background="Transparent"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
+                                        BorderThickness="0,0,0,1"
+                                        Padding="5,4">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding MemberCount, StringFormat=Members: {0}}" FontSize="11" />
+                                        <TextBlock Text="{Binding StatusSummary}" FontSize="10" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </GroupBox>
+
+                <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" />
+
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Saved group members" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <Grid Grid.Row="1">
+                        <ListView ItemsSource="{Binding Entries}"
+                                  SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
+                                  BorderThickness="0"
+                                  Background="Transparent"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                  ScrollViewer.CanContentScroll="True"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  HorizontalContentAlignment="Stretch">
+                            <ListView.View>
+                                <GridView AllowsColumnReorder="False">
+                                    <GridViewColumn Header="Group" DisplayMemberBinding="{Binding GroupName}" Width="130" />
+                                    <GridViewColumn Header="Pal" DisplayMemberBinding="{Binding PalName}" Width="150" />
+                                    <GridViewColumn Header="Status" Width="105">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Status}" Style="{StaticResource StatusTextStyle}" />
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Source" DisplayMemberBinding="{Binding SourceScope}" Width="170" />
+                                    <GridViewColumn Header="Instance" DisplayMemberBinding="{Binding InstanceId}" Width="130" />
+                                    <GridViewColumn Header="Key" DisplayMemberBinding="{Binding PalEntryKey}" Width="130" />
+                                    <GridViewColumn Header="Details" DisplayMemberBinding="{Binding Details}" Width="260" />
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                        <TextBlock Text="No saved group members."
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontStyle="Italic"
+                                   Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
+                                   Visibility="{Binding HasEntries, Converter={StaticResource VVC_Negate}}" />
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <Expander Grid.Row="6"
+                      Header="Current source snapshot"
+                      IsExpanded="True"
+                      Visibility="{Binding HasSourceEntries, Converter={StaticResource VVC}}"
+                      Margin="0,5,0,0">
+                <ListView ItemsSource="{Binding SourceEntries}"
+                          SelectedItem="{Binding SelectedSourceEntry, Mode=TwoWay}"
+                          Height="180"
+                          BorderThickness="0"
+                          Background="Transparent"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          ScrollViewer.CanContentScroll="True"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          HorizontalContentAlignment="Stretch">
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="False">
+                            <GridViewColumn Header="Pal" DisplayMemberBinding="{Binding PalName}" Width="150" />
+                            <GridViewColumn Header="Level" DisplayMemberBinding="{Binding Level}" Width="55" />
+                            <GridViewColumn Header="Gender" DisplayMemberBinding="{Binding Gender}" Width="75" />
+                            <GridViewColumn Header="Location" DisplayMemberBinding="{Binding Location}" Width="130" />
+                            <GridViewColumn Header="Source" DisplayMemberBinding="{Binding SourceScope}" Width="170" />
+                            <GridViewColumn Header="Instance" DisplayMemberBinding="{Binding InstanceId}" Width="130" />
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Expander>
+        </Grid>
+    </Border>
+</UserControl>
