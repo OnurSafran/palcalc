@@ -221,8 +221,6 @@ namespace PalCalc.Solver.PalReference
                 result = new SurgeryTablePalReference(newParent, newOperations);            }
             else
             {
-                // NewCached takes `ref` since it will modify and try to optimize the list of operations, but `Operations` should have
-                // already been optimized, so it should no-op
                 var selfOps = Operations;
                 result = new SurgeryTablePalReference(newParent, selfOps);
             }

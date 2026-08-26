@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -221,18 +222,24 @@ namespace AdonisUI.Controls
         {
             try
             {
-                string appFilePath = Process.GetCurrentProcess().MainModule.FileName;
-                if (!File.Exists(appFilePath))
+                string appFilePath = Process.GetCurrentProcess().MainModule?.FileName;
+                if (String.IsNullOrEmpty(appFilePath) || !File.Exists(appFilePath))
                     return null;
 
-                Icon appIcon = System.Drawing.Icon.ExtractAssociatedIcon(appFilePath);
+                using Icon appIcon = System.Drawing.Icon.ExtractAssociatedIcon(appFilePath);
 
                 if (appIcon == null)
                     return null;
 
                 return Imaging.CreateBitmapSourceFromHIcon(appIcon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             }
-            catch (Win32Exception)
+            catch (Exception exception) when (
+                exception is Win32Exception ||
+                exception is ArgumentException ||
+                exception is ExternalException ||
+                exception is InvalidOperationException ||
+                exception is NotSupportedException
+            )
             {
                 return null;
             }
