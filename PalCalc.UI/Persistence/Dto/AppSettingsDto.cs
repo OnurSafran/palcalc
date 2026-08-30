@@ -19,6 +19,9 @@ namespace PalCalc.UI.Persistence.Dto
         public BreedingResultListColumnSettingsDto BreedingResultListColumns { get; init; }
         public UiLayoutSettingsDto UiLayout { get; init; }
 
+        [JsonProperty(Required = Required.Default)]
+        public Dictionary<string, bool> YourPalsSolverSourceBySave { get; init; }
+
         [JsonProperty(Required = Required.AllowNull)]
         public string SelectedGameIdentifier { get; init; }
 

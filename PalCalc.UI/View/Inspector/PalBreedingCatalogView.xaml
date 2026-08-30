@@ -26,7 +26,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" MinWidth="320" />
             <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="340" MinWidth="260" />
+            <ColumnDefinition Width="*" MinWidth="520" />
         </Grid.ColumnDefinitions>
 
         <!-- Left Pane: Catalog & Controls -->
@@ -55,10 +55,13 @@
 
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" MaxHeight="300" />
-                        <RowDefinition Height="*" />
+                        <RowDefinition Height="2*" MinHeight="120" MaxHeight="300" />
+                        <RowDefinition Height="3*" MinHeight="160" />
                     </Grid.RowDefinitions>
-                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ScrollViewer Grid.Row="0"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  CanContentScroll="False">
                         <StackPanel DataContext="{Binding SelectedDetails}">
                     <!-- Header -->
                     <Grid Margin="0,0,0,12">
@@ -168,32 +171,54 @@
 
                     <Separator Margin="0,0,0,12" />
 
-                    <!-- Breeding Recipes Section -->
-                    <TextBlock Text="{itl:LocalizedText LC_BREEDING_RECIPES}" FontWeight="Bold" FontSize="14" Margin="0,0,0,6" />
                         </StackPanel>
                     </ScrollViewer>
-                    <ListBox Grid.Row="1"
-                             ItemsSource="{Binding SelectedDetails.Recipes}"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             ScrollViewer.CanContentScroll="True"
-                             VirtualizingPanel.IsVirtualizing="True"
-                             VirtualizingPanel.VirtualizationMode="Recycling"
-                             BorderThickness="0"
-                             Background="Transparent"
-                             HorizontalContentAlignment="Stretch">
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="220" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" MinWidth="220" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Breeding Recipes -->
+                        <DockPanel Grid.Column="0" LastChildFill="True" Margin="0,0,4,0">
+                            <TextBlock DockPanel.Dock="Top"
+                                       Text="{itl:LocalizedText LC_BREEDING_RECIPES}"
+                                       FontWeight="Bold"
+                                       FontSize="14"
+                                       Margin="0,0,0,6" />
+                            <ListBox ItemsSource="{Binding SelectedDetails.Recipes}"
+                                     SelectedItem="{Binding SelectedDetails.SelectedRecipe, Mode=TwoWay}"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.CanContentScroll="True"
+                                     VirtualizingPanel.IsVirtualizing="True"
+                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     HorizontalContentAlignment="Stretch">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
-                                <Setter Property="Focusable" Value="False" />
                                 <Setter Property="IsHitTestVisible" Value="True" />
                                 <Setter Property="Padding" Value="0" />
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             </Style>
                         </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:PalBreedingRecipeViewModel}">
-                                <Border BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
-                                        BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,4"
+                                <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:PalBreedingRecipeViewModel}">
+                                <Border BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,4"
                                         Background="{DynamicResource {x:Static adonisUi:Brushes.Layer2BackgroundBrush}}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource {x:Static adonisUi:Brushes.AccentBrush}}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
                                     <StackPanel>
                                         <!-- Parents Line -->
                                         <Grid Margin="0,0,0,4">
@@ -250,57 +275,103 @@
                                                    Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
                                                    Margin="0,0,0,4" />
 
-                                        <!-- Matching Pairs List -->
-                                        <Expander Header="{Binding MatchingPairCountDisplay.Value}" IsExpanded="False" Visibility="{Binding HasMatchingPairs, Converter={StaticResource VVC}}">
-                                            <StackPanel Margin="0,4,0,0">
-                                            <TextBlock Text="{Binding DisplayedPairsNotice.Value}"
-                                                       Visibility="{Binding HasMoreMatchingPairs, Converter={StaticResource VVC}}"
-                                                       FontSize="10" FontStyle="Italic" Margin="4,0,4,4" />
-                                            <ItemsControl ItemsSource="{Binding MatchingPairs}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="{x:Type vm:PalBreedingPairViewModel}">
-                                                        <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer3BorderBrush}}" Padding="4">
-                                                            <StackPanel>
-                                                                <Grid>
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="*" />
-                                                                        <ColumnDefinition Width="Auto" />
-                                                                        <ColumnDefinition Width="*" />
-                                                                    </Grid.ColumnDefinitions>
-                                                                    <StackPanel Grid.Column="0">
-                                                                        <TextBlock Text="{Binding Parent1Instance.DisplayName.Value}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                                                        <TextBlock Text="{Binding Parent1Instance.Gender.Value}" FontSize="10" />
-                                                                        <TextBlock Text="{Binding Parent1Instance.LocationDescription.Value}" FontSize="10" TextTrimming="CharacterEllipsis" />
-                                                                    </StackPanel>
-                                                                    <TextBlock Grid.Column="1" Text=" ↔ " FontSize="10" />
-                                                                    <StackPanel Grid.Column="2">
-                                                                        <TextBlock Text="{Binding Parent2Instance.DisplayName.Value}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                                                        <TextBlock Text="{Binding Parent2Instance.Gender.Value}" FontSize="10" />
-                                                                        <TextBlock Text="{Binding Parent2Instance.LocationDescription.Value}" FontSize="10" TextTrimming="CharacterEllipsis" />
-                                                                    </StackPanel>
-                                                                </Grid>
-                                                                <Button Content="{Binding PinButtonText.Value}"
-                                                                        Command="{Binding PinCommand}"
-                                                                        IsEnabled="{Binding CanTogglePin}"
-                                                                        HorizontalAlignment="Right"
-                                                                        Padding="5,1"
-                                                                        Margin="0,2,0,0" />
-                                                                <TextBlock Visibility="{Binding HasExpeditionParent, Converter={StaticResource VVC}}"
-                                                                           Text="{Binding ExpeditionWarningText.Value}"
-                                                                           Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}"
-                                                                           FontSize="10" FontWeight="Bold" Margin="0,2,0,0" />
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                            </StackPanel>
-                                        </Expander>
+                                        <!-- Matching pairs are shown in the adjacent pane. -->
+                                        <TextBlock Text="{Binding MatchingPairCountDisplay.Value}"
+                                                   Visibility="{Binding HasMatchingPairs, Converter={StaticResource VVC}}"
+                                                   FontSize="10"
+                                                   Margin="0,4,0,0" />
                                     </StackPanel>
                                 </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+
+                        <GridSplitter Grid.Column="1"
+                                      Width="4"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Stretch"
+                                      Background="Transparent" />
+
+                        <!-- Matching Pairs -->
+                        <Border Grid.Column="2"
+                                Visibility="{Binding SelectedDetails.SelectedRecipe, Converter={StaticResource VVC}}"
+                                BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer1BorderBrush}}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="6"
+                                Margin="4,0,0,0">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                    <TextBlock Text="{Binding SelectedDetails.SelectedRecipe.MatchingPairCountDisplay.Value}"
+                                               FontWeight="Bold"
+                                               FontSize="14" />
+                                    <TextBlock Text="{Binding SelectedDetails.SelectedRecipe.DisplayedPairsNotice.Value}"
+                                               Visibility="{Binding SelectedDetails.SelectedRecipe.HasMoreMatchingPairs, Converter={StaticResource VVC}}"
+                                               FontSize="10"
+                                               FontStyle="Italic"
+                                               Margin="0,2,0,0" />
+                                </StackPanel>
+                                <ListBox ItemsSource="{Binding SelectedDetails.SelectedRecipe.MatchingPairs}"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         ScrollViewer.CanContentScroll="True"
+                                         VirtualizingPanel.IsVirtualizing="True"
+                                         VirtualizingPanel.VirtualizationMode="Recycling"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         HorizontalContentAlignment="Stretch">
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="Focusable" Value="False" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:PalBreedingPairViewModel}">
+                                            <Border BorderThickness="0,0,0,1"
+                                                    BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer3BorderBrush}}"
+                                                    Padding="4">
+                                                <StackPanel>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock Text="{Binding Parent1Instance.DisplayName.Value}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="{Binding Parent1Instance.Gender.Value}" FontSize="10" />
+                                                            <TextBlock Text="{Binding Parent1Instance.LocationDescription.Value}" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="1" Text=" ↔ " FontSize="10" />
+                                                        <StackPanel Grid.Column="2">
+                                                            <TextBlock Text="{Binding Parent2Instance.DisplayName.Value}" FontSize="10" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="{Binding Parent2Instance.Gender.Value}" FontSize="10" />
+                                                            <TextBlock Text="{Binding Parent2Instance.LocationDescription.Value}" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    <Button Content="{Binding PinButtonText.Value}"
+                                                            Command="{Binding PinCommand}"
+                                                            IsEnabled="{Binding CanTogglePin}"
+                                                            HorizontalAlignment="Right"
+                                                            Padding="5,1"
+                                                            Margin="0,2,0,0" />
+                                                    <TextBlock Visibility="{Binding HasExpeditionParent, Converter={StaticResource VVC}}"
+                                                               Text="{Binding ExpeditionWarningText.Value}"
+                                                               Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}"
+                                                               FontSize="10"
+                                                               FontWeight="Bold"
+                                                               Margin="0,2,0,0" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </Grid>
                     <ContentControl Grid.RowSpan="2"
                                     ContentTemplate="{DynamicResource {x:Static adonisUi:Templates.LoadingCircle}}"
                                     Visibility="{Binding IsLoadingDetails, Converter={StaticResource VVC}}"

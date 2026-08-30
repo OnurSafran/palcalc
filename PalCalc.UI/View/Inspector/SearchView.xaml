@@ -141,10 +141,18 @@
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <Expander Header="{itl:LocalizedText LC_SAVESEARCH_GRP_SEARCH_SETTINGS}" Grid.Row="0" adonisExtensions:LayerExtension.IncreaseLayer="True">
+            <TextBlock Grid.Row="0"
+                       Text="{itl:LocalizedText LC_CUSTOMIZATIONS_READ_ONLY}"
+                       TextWrapping="Wrap"
+                       Margin="5,5,5,0"
+                       Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}"
+                       Visibility="{Binding HasCustomizationsLoadError, Converter={StaticResource VVC}}" />
+
+            <Expander Header="{itl:LocalizedText LC_SAVESEARCH_GRP_SEARCH_SETTINGS}" Grid.Row="1" adonisExtensions:LayerExtension.IncreaseLayer="True">
                 <Expander.Style>
                     <Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}">
                         <Setter Property="IsExpanded" Value="True" />
@@ -264,7 +272,7 @@
                 </StackPanel>
             </Expander>
 
-            <DockPanel Grid.Row="1">
+            <DockPanel Grid.Row="2">
                 <ContentControl DockPanel.Dock="Bottom"
                                 DataContext="{Binding OwnerTree.SelectedSource.Container.SelectedPalSlot}"
                                 Content="{Binding}"
@@ -275,7 +283,8 @@
                             <!-- note: putting the editor controls directly in this template causes a weird issue with AutoCompleteComboBox
                                  which clears out the VM values when the control is hidden. this leads to the custom pal being reset whenever
                                  you select a different container. -->
-                            <StackPanel Background="{DynamicResource {x:Static adonisUi:Brushes.Layer3BackgroundBrush}}">
+                            <StackPanel Background="{DynamicResource {x:Static adonisUi:Brushes.Layer3BackgroundBrush}}"
+                                        IsEnabled="{Binding DataContext.CanEditCustomizations, RelativeSource={RelativeSource AncestorType={x:Type iv:SearchView}}}">
                                 <!-- (GridSplitter not actually doing anything, just want visual consistency with the other borders) -->
                                 <GridSplitter HorizontalAlignment="Stretch" Height="5" IsEnabled="False" />
 
@@ -325,7 +334,7 @@
                                                         <sv:ContainerGridView DataContext="{Binding}"/>
                                                     </DataTemplate>
                                                     <DataTemplate DataType="{x:Type sgvm:CustomContainerGridViewModel}">
-                                                        <StackPanel>
+                                                        <StackPanel IsEnabled="{Binding DataContext.CanEditCustomizations, RelativeSource={RelativeSource AncestorType={x:Type iv:SearchView}}}">
                                                             <TextBlock HorizontalAlignment="Center" FontStyle="Italic" Padding="0,0,0,15" Text="{itl:LocalizedText LC_CUSTOM_CONTAINERS_DESCRIPTION}" />
                                                             <sv:ContainerGridView DataContext="{Binding}" />
                                                         </StackPanel>

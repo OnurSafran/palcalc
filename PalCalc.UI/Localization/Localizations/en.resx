@@ -250,6 +250,9 @@ This value is doubled internally to account for pal inactivity at night.</value>
   <data name="LC_CUSTOM_CONTAINERS_DESCRIPTION" xml:space="preserve">
     <value>Changes will be saved in Pal Calc automatically. Custom containers do not affect Palworld save files.</value>
   </data>
+  <data name="LC_CUSTOMIZATIONS_READ_ONLY" xml:space="preserve">
+    <value>Custom containers are read-only because their data could not be loaded safely. Fix the file and reload the save before editing.</value>
+  </data>
   <data name="LC_CUSTOM_CONTAINER_ADD_NEW" xml:space="preserve">
     <value>Add new...</value>
   </data>
@@ -1306,4 +1309,188 @@ Would you like to download the installer now?
   <data name="LC_LIBOOZ_VC_REDIST_BTN_MORE_INFO" xml:space="preserve">
     <value>More Information</value>
   </data>
+  <data name="LC_YOUR_PALS_TITLE" xml:space="preserve"><value>My Pals</value></data>
+  <data name="LC_YOUR_PALS_SAVE_SCOPE" xml:space="preserve"><value>Save:</value></data>
+  <data name="LC_YOUR_PALS_SESSION" xml:space="preserve"><value>Session:</value></data>
+  <data name="LC_YOUR_PALS_SOURCE" xml:space="preserve"><value>Source:</value></data>
+  <data name="LC_YOUR_PALS_USE_AS_SOLVER_SOURCE" xml:space="preserve"><value>Use as solver source</value></data>
+  <data name="LC_YOUR_PALS_REFRESH" xml:space="preserve"><value>Refresh</value></data>
+  <data name="LC_YOUR_PALS_DISCARD_RELOAD" xml:space="preserve"><value>Discard &amp; reload</value></data>
+  <data name="LC_YOUR_PALS_SEARCH_SAVED_MEMBERS" xml:space="preserve"><value>Search saved members</value></data>
+  <data name="LC_YOUR_PALS_CLEAR" xml:space="preserve"><value>Clear</value></data>
+  <data name="LC_YOUR_PALS_SHOWING" xml:space="preserve"><value>Showing:</value></data>
+  <data name="LC_YOUR_PALS_NEW_GROUP_NAME" xml:space="preserve"><value>New group name</value></data>
+  <data name="LC_YOUR_PALS_CREATE_GROUP" xml:space="preserve"><value>Create group</value></data>
+  <data name="LC_YOUR_PALS_SELECTED_GROUP_NAME" xml:space="preserve"><value>Selected group name</value></data>
+  <data name="LC_YOUR_PALS_MOVE_GROUP_UP" xml:space="preserve"><value>Move group up</value></data>
+  <data name="LC_YOUR_PALS_MOVE_GROUP_DOWN" xml:space="preserve"><value>Move group down</value></data>
+  <data name="LC_YOUR_PALS_DELETE_GROUP" xml:space="preserve"><value>Delete group</value></data>
+  <data name="LC_YOUR_PALS_MANUAL_INTERNAL_NAME" xml:space="preserve"><value>Manual Pal internal name</value></data>
+  <data name="LC_YOUR_PALS_ADD_MANUAL" xml:space="preserve"><value>Add manual</value></data>
+  <data name="LC_YOUR_PALS_UPDATE_MANUAL" xml:space="preserve"><value>Update manual</value></data>
+  <data name="LC_YOUR_PALS_ADD_SOURCE" xml:space="preserve"><value>Add source</value></data>
+  <data name="LC_YOUR_PALS_REBIND" xml:space="preserve"><value>Rebind</value></data>
+  <data name="LC_YOUR_PALS_RESOLVE_MATCHING" xml:space="preserve"><value>Resolve matching</value></data>
+  <data name="LC_YOUR_PALS_REMOVE_DUPLICATES" xml:space="preserve"><value>Remove duplicates</value></data>
+  <data name="LC_YOUR_PALS_REMOVE_MEMBER" xml:space="preserve"><value>Remove member</value></data>
+  <data name="LC_YOUR_PALS_CREATE_DOCUMENT" xml:space="preserve"><value>Create document</value></data>
+  <data name="LC_YOUR_PALS_REPAIR_RECOVERED" xml:space="preserve"><value>Repair recovered</value></data>
+  <data name="LC_YOUR_PALS_RECOVERY_DETAILS" xml:space="preserve"><value>Recovery details</value></data>
+  <data name="LC_YOUR_PALS_ORPHANED_DOCUMENTS" xml:space="preserve"><value>Orphaned Your Pals documents</value></data>
+  <data name="LC_YOUR_PALS_REFRESH_ORPHANED" xml:space="preserve"><value>Refresh orphaned</value></data>
+  <data name="LC_YOUR_PALS_DELETE_SELECTED_ORPHAN" xml:space="preserve"><value>Delete selected orphan</value></data>
+  <data name="LC_YOUR_PALS_GROUPS" xml:space="preserve"><value>Groups</value></data>
+  <data name="LC_YOUR_PALS_MEMBERS" xml:space="preserve"><value>Members:</value></data>
+  <data name="LC_YOUR_PALS_SAVED_GROUP_MEMBERS" xml:space="preserve"><value>Saved group members</value></data>
+  <data name="LC_YOUR_PALS_NO_SAVED_GROUP_MEMBERS" xml:space="preserve"><value>No saved group members.</value></data>
+  <data name="LC_YOUR_PALS_CURRENT_SOURCE_SNAPSHOT" xml:space="preserve"><value>Current source snapshot</value></data>
+  <data name="LC_YOUR_PALS_BACK_TO_SAVE_SELECTION" xml:space="preserve"><value>Back to save selection</value></data>
+  <data name="LC_YOUR_PALS_DESCRIPTION" xml:space="preserve"><value>These documents belong to saves that are not currently available. They are kept separate from active saves and can be deleted only with explicit confirmation.</value></data>
+  <data name="LC_YOUR_PALS_NO_ORPHANED_DOCUMENTS" xml:space="preserve"><value>No orphaned Your Pals documents were found. Click Refresh to scan again.</value></data>
+  <data name="LC_YOUR_PALS_OWNER" xml:space="preserve"><value>Owner</value></data>
+  <data name="LC_YOUR_PALS_REASON" xml:space="preserve"><value>Reason</value></data>
+  <data name="LC_YOUR_PALS_DOCUMENT" xml:space="preserve"><value>Document</value></data>
+  <data name="LC_YOUR_PALS_PAL" xml:space="preserve"><value>Pal</value></data>
+  <data name="LC_YOUR_PALS_STATUS" xml:space="preserve"><value>Status</value></data>
+  <data name="LC_YOUR_PALS_SOURCE_COLUMN" xml:space="preserve"><value>Source</value></data>
+  <data name="LC_YOUR_PALS_INSTANCE" xml:space="preserve"><value>Instance</value></data>
+  <data name="LC_YOUR_PALS_KEY" xml:space="preserve"><value>Key</value></data>
+  <data name="LC_YOUR_PALS_DETAILS" xml:space="preserve"><value>Details</value></data>
+  <data name="LC_YOUR_PALS_PURPOSE" xml:space="preserve"><value>Organize owned Pals for breeding and tracking</value></data>
+  <data name="LC_YOUR_PALS_ALL_PALS" xml:space="preserve"><value>All Pals</value></data>
+  <data name="LC_YOUR_PALS_COLLECTION_SUMMARY" xml:space="preserve"><value>{pals} pals · {groups} groups · {attention} need attention</value></data>
+  <data name="LC_YOUR_PALS_SAVE_STATE_SAVED" xml:space="preserve"><value>Saved</value></data>
+  <data name="LC_YOUR_PALS_SAVE_STATE_DIRTY" xml:space="preserve"><value>Changes not saved</value></data>
+  <data name="LC_YOUR_PALS_SAVE_STATE_SAVING" xml:space="preserve"><value>Saving</value></data>
+  <data name="LC_YOUR_PALS_SAVE_STATE_READ_ONLY" xml:space="preserve"><value>Read-only recovery</value></data>
+  <data name="LC_YOUR_PALS_SAVE_STATE_FAILED" xml:space="preserve"><value>Save failed</value></data>
+  <data name="LC_YOUR_PALS_NO_SAVE_SELECTED" xml:space="preserve"><value>No save selected</value></data>
+  <data name="LC_YOUR_PALS_NO_GROUPS" xml:space="preserve"><value>Create your first group</value></data>
+  <data name="LC_YOUR_PALS_NO_GROUPS_DESCRIPTION" xml:space="preserve"><value>Use groups for breeding teams, workers, favorites, or any collection you want.</value></data>
+  <data name="LC_YOUR_PALS_EMPTY_COLLECTION" xml:space="preserve"><value>This group has no Pals yet</value></data>
+  <data name="LC_YOUR_PALS_EMPTY_COLLECTION_DESCRIPTION" xml:space="preserve"><value>Add Pals to this group to see them here.</value></data>
+  <data name="LC_YOUR_PALS_NO_QUERY_MATCHES" xml:space="preserve"><value>No Pals match your search or filters</value></data>
+  <data name="LC_YOUR_PALS_NO_QUERY_MATCHES_DESCRIPTION" xml:space="preserve"><value>Clear the search or filters to see more Pals.</value></data>
+  <data name="LC_YOUR_PALS_NO_SOURCE_ENTRIES" xml:space="preserve"><value>No source Pals are currently available</value></data>
+  <data name="LC_YOUR_PALS_SOURCE_UNAVAILABLE" xml:space="preserve"><value>The current save source is unavailable.</value></data>
+  <data name="LC_YOUR_PALS_GROUP_ACTIONS" xml:space="preserve"><value>Group actions</value></data>
+  <data name="LC_YOUR_PALS_ADVANCED" xml:space="preserve"><value>Advanced</value></data>
+  <data name="LC_YOUR_PALS_MORE" xml:space="preserve"><value>More</value></data>
+  <data name="LC_YOUR_PALS_SEARCH_THIS_GROUP" xml:space="preserve"><value>Search this group</value></data>
+  <data name="LC_YOUR_PALS_ASCENDING" xml:space="preserve"><value>Ascending</value></data>
+  <data name="LC_YOUR_PALS_DESCENDING" xml:space="preserve"><value>Descending</value></data>
+  <data name="LC_YOUR_PALS_ATTENTION_COUNT" xml:space="preserve"><value>{count} need attention</value></data>
+  <data name="LC_YOUR_PALS_UNNAMED_GROUP" xml:space="preserve"><value>Unnamed group</value></data>
+  <data name="LC_YOUR_PALS_UNKNOWN_PAL" xml:space="preserve"><value>Unknown Pal</value></data>
+  <data name="LC_YOUR_PALS_STATUS_ALL" xml:space="preserve"><value>All statuses</value></data>
+  <data name="LC_YOUR_PALS_STATUS_READY" xml:space="preserve"><value>Ready</value></data>
+  <data name="LC_YOUR_PALS_STATUS_CANNOT_IDENTIFY" xml:space="preserve"><value>Cannot identify</value></data>
+  <data name="LC_YOUR_PALS_STATUS_NO_LONGER_IN_SAVE" xml:space="preserve"><value>No longer in save</value></data>
+  <data name="LC_YOUR_PALS_STATUS_CONFLICTING_COPIES" xml:space="preserve"><value>Conflicting copies</value></data>
+  <data name="LC_YOUR_PALS_STATUS_NEEDS_REPAIR" xml:space="preserve"><value>Needs repair</value></data>
+  <data name="LC_YOUR_PALS_STATUS_READY_EXPLANATION" xml:space="preserve"><value>This Pal is available from the current save.</value></data>
+  <data name="LC_YOUR_PALS_STATUS_CANNOT_IDENTIFY_EXPLANATION" xml:space="preserve"><value>The Pal or one of its values is not recognized by the current catalog.</value></data>
+  <data name="LC_YOUR_PALS_STATUS_NO_LONGER_IN_SAVE_EXPLANATION" xml:space="preserve"><value>The saved reference no longer matches a Pal in this save.</value></data>
+  <data name="LC_YOUR_PALS_STATUS_CONFLICTING_COPIES_EXPLANATION" xml:space="preserve"><value>More than one source record matches this reference.</value></data>
+  <data name="LC_YOUR_PALS_STATUS_NEEDS_REPAIR_EXPLANATION" xml:space="preserve"><value>The saved entry is missing required information.</value></data>
+  <data name="LC_YOUR_PALS_ADD_PAL" xml:space="preserve"><value>+ Add Pal</value></data>
+  <data name="LC_YOUR_PALS_ADD_TO_GROUP" xml:space="preserve"><value>Add to {group}</value></data>
+  <data name="LC_YOUR_PALS_ADD_TO_SELECTED_GROUP" xml:space="preserve"><value>Add selected Pal</value></data>
+  <data name="LC_YOUR_PALS_SELECT_GROUP" xml:space="preserve"><value>Select a group</value></data>
+  <data name="LC_YOUR_PALS_NEW_GROUP" xml:space="preserve"><value>+ New group</value></data>
+  <data name="LC_YOUR_PALS_RENAME_GROUP" xml:space="preserve"><value>Rename group</value></data>
+  <data name="LC_YOUR_PALS_GROUP_NAME" xml:space="preserve"><value>Group name</value></data>
+  <data name="LC_YOUR_PALS_DELETE_GROUP_CONFIRM" xml:space="preserve"><value>Delete “{group}”? Pals in this group will no longer be organized under it.</value></data>
+  <data name="LC_YOUR_PALS_ADD_MANUAL_PAL" xml:space="preserve"><value>Add manual Pal</value></data>
+  <data name="LC_YOUR_PALS_EDIT_MANUAL_PAL" xml:space="preserve"><value>Edit manual Pal</value></data>
+  <data name="LC_YOUR_PALS_SAVE_MANUAL_PAL" xml:space="preserve"><value>Save manual Pal</value></data>
+  <data name="LC_YOUR_PALS_MANUAL_PAL" xml:space="preserve"><value>Pal</value></data>
+  <data name="LC_YOUR_PALS_NICKNAME" xml:space="preserve"><value>Nickname (optional)</value></data>
+  <data name="LC_YOUR_PALS_MANUAL_HELP" xml:space="preserve"><value>Manual Pals are saved definitions for planning. They are not live instances from this save.</value></data>
+  <data name="LC_YOUR_PALS_MANUAL_EDITOR_INVALID" xml:space="preserve"><value>Choose a Pal and enter a level of 1 or higher.</value></data>
+  <data name="LC_YOUR_PALS_SEARCH_SOURCE_PALS" xml:space="preserve"><value>Search Pals in this save</value></data>
+  <data name="LC_YOUR_PALS_NO_SOURCE_MATCHES" xml:space="preserve"><value>No available Pals match your search.</value></data>
+  <data name="LC_YOUR_PALS_ALREADY_IN_GROUP" xml:space="preserve"><value>Already added</value></data>
+  <data name="LC_YOUR_PALS_PAL_DETAILS" xml:space="preserve"><value>Pal details</value></data>
+  <data name="LC_YOUR_PALS_CLOSE_DETAILS" xml:space="preserve"><value>Close details</value></data>
+  <data name="LC_YOUR_PALS_REMOVE_FROM_GROUP" xml:space="preserve"><value>Remove from group</value></data>
+  <data name="LC_YOUR_PALS_REMOVE_MEMBER_CONFIRM" xml:space="preserve"><value>Remove “{pal}” from “{group}”? This only changes your My Pals collection.</value></data>
+  <data name="LC_YOUR_PALS_SOLVER_ELIGIBILITY" xml:space="preserve"><value>Solver status</value></data>
+  <data name="LC_YOUR_PALS_ADDED_TO_GROUP" xml:space="preserve"><value>{pal} added to {group}.</value></data>
+  <data name="LC_YOUR_PALS_MANUAL_UPDATED" xml:space="preserve"><value>Manual Pal updated.</value></data>
+  <data name="LC_YOUR_PALS_REVIEW_ATTENTION" xml:space="preserve"><value>Review attention</value></data>
+  <data name="LC_YOUR_PALS_ATTENTION_VIEW" xml:space="preserve"><value>Needs attention</value></data>
+  <data name="LC_YOUR_PALS_REVIEW" xml:space="preserve"><value>Review</value></data>
+  <data name="LC_YOUR_PALS_FIND_REPLACEMENT" xml:space="preserve"><value>Find replacement</value></data>
+  <data name="LC_YOUR_PALS_FIND_REPLACEMENT_DESCRIPTION" xml:space="preserve"><value>Choose the current save Pal that should replace this saved reference.</value></data>
+  <data name="LC_YOUR_PALS_CHOOSE_COPY" xml:space="preserve"><value>Choose a copy</value></data>
+  <data name="LC_YOUR_PALS_CHOOSE_COPY_DESCRIPTION" xml:space="preserve"><value>Choose which current source record represents this saved Pal.</value></data>
+  <data name="LC_YOUR_PALS_USE_SELECTED_COPY" xml:space="preserve"><value>Use selected copy</value></data>
+  <data name="LC_YOUR_PALS_USE_REPLACEMENT" xml:space="preserve"><value>Use replacement</value></data>
+  <data name="LC_YOUR_PALS_REPLACE_IN_GROUP" xml:space="preserve"><value>Replace {pal} in {group}</value></data>
+  <data name="LC_YOUR_PALS_REBOUND_ENTRY" xml:space="preserve"><value>{pal} reference updated.</value></data>
+  <data name="LC_YOUR_PALS_SOLVER_CARD_TITLE" xml:space="preserve"><value>Use My Pals in breeding calculations</value></data>
+  <data name="LC_YOUR_PALS_SOLVER_CARD_DESCRIPTION" xml:space="preserve"><value>Ready Pals in this collection can be used as solver inputs. Entries needing attention stay saved but are excluded.</value></data>
+  <data name="LC_YOUR_PALS_SOLVER_READY_COUNT" xml:space="preserve"><value>{count} ready Pals available to the solver</value></data>
+  <data name="LC_YOUR_PALS_SOLVER_EXCLUDED_COUNT" xml:space="preserve"><value>{count} entries excluded until they are resolved</value></data>
+  <data name="LC_YOUR_PALS_SOLVER_INCLUDED" xml:space="preserve"><value>My Pals are included in the solver</value></data>
+  <data name="LC_YOUR_PALS_SOLVER_NOT_INCLUDED" xml:space="preserve"><value>My Pals are not included in the solver</value></data>
+  <data name="LC_YOUR_PALS_SORT" xml:space="preserve"><value>Sort by</value></data>
+  <data name="LC_YOUR_PALS_SORT_DIRECTION" xml:space="preserve"><value>Sort direction</value></data>
+  <data name="LC_YOUR_PALS_RESIZE_GROUPS" xml:space="preserve"><value>Resize groups and collection</value></data>
+  <data name="LC_YOUR_PALS_ORPHANED_DOCUMENT_COUNT" xml:space="preserve"><value>{count} orphaned documents</value></data>
+  <data name="LC_YOUR_PALS_SOURCE_AVAILABLE" xml:space="preserve"><value>Available</value></data>
+  <data name="LC_YOUR_PALS_SOURCE_UNAVAILABLE_SHORT" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="LC_YOUR_PALS_SESSION_HEALTHY" xml:space="preserve"><value>Ready</value></data>
+  <data name="LC_YOUR_PALS_SESSION_DIRTY" xml:space="preserve"><value>Changes not saved</value></data>
+  <data name="LC_YOUR_PALS_SESSION_READ_ONLY" xml:space="preserve"><value>Read-only</value></data>
+  <data name="LC_YOUR_PALS_SESSION_RECOVERY" xml:space="preserve"><value>Recovery</value></data>
+  <data name="LC_YOUR_PALS_SESSION_SOURCE_UNAVAILABLE" xml:space="preserve"><value>Source unavailable</value></data>
+  <data name="LC_YOUR_PALS_SESSION_EXTERNAL_CONFLICT" xml:space="preserve"><value>External conflict</value></data>
+  <data name="LC_YOUR_PALS_SESSION_WRITE_FAILED" xml:space="preserve"><value>Save failed</value></data>
+  <data name="LC_YOUR_PALS_SESSION_ORPHANED" xml:space="preserve"><value>Orphaned</value></data>
+  <data name="LC_YOUR_PALS_DISCARDED_RELOADED" xml:space="preserve"><value>Local changes discarded and document reloaded.</value></data>
+  <data name="LC_YOUR_PALS_DOCUMENT_CREATED" xml:space="preserve"><value>Your Pals document created. Save to persist changes.</value></data>
+  <data name="LC_YOUR_PALS_SAVE_FAILED" xml:space="preserve"><value>The Your Pals document could not be saved.</value></data>
+  <data name="LC_YOUR_PALS_GROUP_CREATED" xml:space="preserve"><value>Group created. Save to persist changes.</value></data>
+  <data name="LC_YOUR_PALS_GROUP_RENAMED" xml:space="preserve"><value>Group renamed. Save to persist changes.</value></data>
+  <data name="LC_YOUR_PALS_GROUP_DELETED" xml:space="preserve"><value>Group deleted. Save to persist changes.</value></data>
+  <data name="LC_YOUR_PALS_GROUP_ORDER_CHANGED" xml:space="preserve"><value>Group order changed. Save to persist changes.</value></data>
+  <data name="LC_YOUR_PALS_MEMBER_REMOVED" xml:space="preserve"><value>Member removed from the group. Save to persist changes.</value></data>
+  <data name="LC_YOUR_PALS_REBOUND_MATCHING" xml:space="preserve"><value>Rebound {count} matching member(s). Save to persist changes.</value></data>
+  <data name="LC_YOUR_PALS_DUPLICATES_REMOVED" xml:space="preserve"><value>Removed {count} duplicate member(s). Save to persist changes.</value></data>
+  <data name="LC_YOUR_PALS_RECOVERED_SAVED" xml:space="preserve"><value>Recovered and saved Your Pals ({count} repair change(s)).</value></data>
+  <data name="LC_YOUR_PALS_DELETE_ORPHAN_CONFIRM" xml:space="preserve"><value>Delete the orphaned Your Pals document?
+
+{path}
+
+Its document and backup will be removed.</value></data>
+  <data name="LC_YOUR_PALS_DELETE_ORPHAN_TITLE" xml:space="preserve"><value>Delete orphaned document</value></data>
+  <data name="LC_YOUR_PALS_ORPHAN_DELETED" xml:space="preserve"><value>Orphaned document deleted.</value></data>
+  <data name="LC_YOUR_PALS_RECOVERY_UNRECOVERABLE" xml:space="preserve"><value>Repair is disabled because one or more whole records could not be recovered safely. The original file is preserved; use the backup or recover the missing records manually.</value></data>
+  <data name="LC_YOUR_PALS_RECOVERY_BACKUP" xml:space="preserve"><value>A backup was loaded read-only. Use Repair recovered to restore the primary document. If repair fails, correct the file problem and retry; the backup remains preserved.</value></data>
+  <data name="LC_YOUR_PALS_RECOVERY_REPAIRABLE" xml:space="preserve"><value>Some document data needs repair. Review the recovery details, then use Repair recovered to write the repaired projection.</value></data>
+  <data name="LC_YOUR_PALS_RECOVERY_READ_ONLY" xml:space="preserve"><value>This document is read-only because it could not be loaded safely. Review the recovery details; no empty replacement will be saved automatically.</value></data>
+  <data name="LC_YOUR_PALS_MEMBER_UNINTERPRETED" xml:space="preserve"><value>The member could not be interpreted.</value></data>
+  <data name="LC_YOUR_PALS_MISSING_KEY" xml:space="preserve"><value>Missing key</value></data>
+  <data name="LC_YOUR_PALS_MISSING_KIND" xml:space="preserve"><value>Missing kind</value></data>
+  <data name="LC_YOUR_PALS_MANUAL_DEFINITION" xml:space="preserve"><value>Manual definition</value></data>
+  <data name="LC_YOUR_PALS_NO_RECOVERY_DETAILS" xml:space="preserve"><value>No recovery details</value></data>
+  <data name="LC_YOUR_PALS_NO_SESSION" xml:space="preserve"><value>No session</value></data>
+  <data name="LC_YOUR_PALS_DISCARD_CONFIRM" xml:space="preserve"><value>Discard all unsaved Your Pals changes and reload the saved document?</value></data>
+  <data name="LC_YOUR_PALS_DISCARD_TITLE" xml:space="preserve"><value>Discard unsaved changes</value></data>
+  <data name="LC_YOUR_PALS_UNSAVED_NAVIGATION_CONFIRM" xml:space="preserve"><value>Your Pals has unsaved changes. Choose Yes to save, No to discard, or Cancel to stay.</value></data>
+  <data name="LC_YOUR_PALS_UNSAVED_NAVIGATION_TITLE" xml:space="preserve"><value>Unsaved Your Pals changes</value></data>
+  <data name="LC_YOUR_PALS_SOLVER_SOURCE_EMPTY" xml:space="preserve"><value>No Pals here can be used by the solver yet, so it would find nothing.</value></data>
+  <data name="LC_YOUR_PALS_SOLVER_MISSING_COUNT" xml:space="preserve"><value>{count} saved Pals are no longer in this save and will be skipped.</value></data>
+  <data name="LC_YOUR_PALS_REMOVE_MISSING" xml:space="preserve"><value>Remove missing Pals</value></data>
+  <data name="LC_YOUR_PALS_REMOVE_MISSING_CONFIRM" xml:space="preserve"><value>Remove {count} saved Pals that are no longer in this save?
+
+This only changes your My Pals collection. Your save file is not touched.</value></data>
+  <data name="LC_YOUR_PALS_MISSING_REMOVED" xml:space="preserve"><value>Removed {count} missing Pals. Save to persist changes.</value></data>
+  <data name="LC_YOUR_PALS_DELETE_ORPHAN_UNVERIFIED_CONFIRM" xml:space="preserve"><value>This Your Pals document is damaged and its owner could not be verified.
+
+{path}
+
+It is a Pal Calc document, not a game save. Delete it and its backup permanently?</value></data>
 </root>

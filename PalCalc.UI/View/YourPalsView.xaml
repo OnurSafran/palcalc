@@ -1,13 +1,18 @@
-<UserControl x:Class="PalCalc.UI.View.YourPalsView"
+﻿<UserControl x:Class="PalCalc.UI.View.YourPalsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:PalCalc.UI.ViewModel"
              xmlns:model="clr-namespace:PalCalc.UI.Model"
+             xmlns:itl="clr-namespace:PalCalc.UI.Localization"
              xmlns:c="clr-namespace:PalCalc.UI.ViewModel.Converters"
              xmlns:adonisUi="clr-namespace:AdonisUI;assembly=AdonisUI"
              d:DataContext="{x:Static vm:YourPalsViewModel.DesignerInstance}"
+             Loaded="YourPalsView_Loaded"
+             SizeChanged="YourPalsView_SizeChanged"
+             PreviewKeyDown="YourPalsView_PreviewKeyDown"
+             KeyboardNavigation.TabNavigation="Local"
              mc:Ignorable="d">
     <UserControl.Resources>
         <c:ValueVisibilityConverter x:Key="VVC" />
@@ -33,13 +38,41 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="SaveStateTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSaveAttention}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSaveHealthy}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static adonisUi:Brushes.SuccessBrush}}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="ListViewItem">
+            <Setter Property="Padding" Value="2" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource {x:Static adonisUi:Brushes.Layer1HighlightBrush}}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource {x:Static adonisUi:Brushes.Layer1HighlightBorderBrush}}" />
+                    <Setter Property="BorderThickness" Value="2" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
-    <Border Padding="5">
-        <Grid>
+    <Grid>
+        <ScrollViewer x:Name="PageScrollViewer"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      CanContentScroll="False"
+                      Padding="0"
+                      PreviewMouseWheel="PageScrollViewer_PreviewMouseWheel">
+            <Border Padding="10">
+                <Grid FocusManager.IsFocusScope="True">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -47,267 +80,734 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="0,0,0,5">
+            <Grid Grid.Row="0" Margin="0,0,0,3">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="Your Pals" FontSize="16" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding SaveScope, StringFormat=Save scope: {0}}"
+                <StackPanel>
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{itl:LocalizedText LC_YOUR_PALS_TITLE}" />
+                    <TextBlock Text="{Binding PageDescription}"
                                Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
+                               TextWrapping="Wrap" />
+                    <TextBlock Margin="0,3,0,0"
+                               Text="{Binding SaveContextText}"
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding SessionState, StringFormat=Session: {0}}" Margin="0,0,10,0" />
-                    <TextBlock Text="{Binding SourceState, StringFormat=Source: {0}}" Margin="0,0,10,0" />
-                    <CheckBox Content="Use as solver source"
-                              IsChecked="{Binding UseAsSolverSource, Mode=TwoWay}"
-                              VerticalAlignment="Center"
-                              Margin="0,0,10,0" />
-                    <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="10,3" />
-                    <Button Content="Discard &amp; reload"
-                            Command="{Binding DiscardChangesAndReloadCommand}"
-                            Padding="10,3"
-                            Margin="5,0,0,0" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                    <Button Content="{itl:LocalizedText LC_COMMON_SAVE}"
+                            Command="{Binding SaveCommand}"
+                            Padding="12,4"
+                            Margin="0,0,5,0"
+                            TabIndex="1"
+                            AutomationProperties.Name="{itl:LocalizedText LC_COMMON_SAVE}" />
+                    <Menu Background="Transparent"
+                          TabIndex="2"
+                          AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_MORE}">
+                        <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_MORE}" Padding="12,4">
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_REFRESH}" Command="{Binding RefreshCommand}" />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_DISCARD_RELOAD}" Command="{Binding DiscardChangesAndReloadCommand}" />
+                            <Separator />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_ADD_SOURCE}" Command="{Binding AddSelectedSourceCommand}" />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_ADD_MANUAL}" Command="{Binding AddManualDefinitionCommand}" />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_UPDATE_MANUAL}" Command="{Binding UpdateManualDefinitionCommand}" />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_REBIND}" Command="{Binding RebindSelectedEntryCommand}" />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_RESOLVE_MATCHING}" Command="{Binding BulkRebindMatchingMembersCommand}" />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_REMOVE_DUPLICATES}" Command="{Binding RemoveDuplicateMembersCommand}" />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_REMOVE_MISSING}" Command="{Binding RemoveMissingMembersCommand}" />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_REMOVE_MEMBER}" Command="{Binding RemoveSelectedEntryCommand}" />
+                            <Separator />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_CREATE_DOCUMENT}" Command="{Binding CreateDocumentCommand}" />
+                            <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_REPAIR_RECOVERED}" Command="{Binding RepairRecoveredDocumentCommand}" />
+                        </MenuItem>
+                    </Menu>
                 </StackPanel>
             </Grid>
 
-            <WrapPanel Grid.Row="1" Margin="0,0,0,5" VerticalAlignment="Center">
-                <TextBox Width="210"
-                         Margin="0,0,5,0"
-                         Padding="5,3"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="Search saved members" />
-                <ComboBox Width="125"
-                          Margin="0,0,5,0"
-                          ItemsSource="{Binding StatusFilterOptions}"
-                          DisplayMemberPath="Label"
-                          SelectedValuePath="Value"
-                          SelectedValue="{Binding SelectedStatusFilter, Mode=TwoWay}" />
-                <ComboBox Width="150"
-                          Margin="0,0,5,0"
-                          ItemsSource="{Binding GroupFilterOptions}"
-                          DisplayMemberPath="Label"
-                          SelectedItem="{Binding SelectedGroupFilter, Mode=TwoWay}" />
-                <ComboBox Width="105"
-                          Margin="0,0,5,0"
-                          ItemsSource="{Binding SortOptions}"
-                          DisplayMemberPath="Label"
-                          SelectedValuePath="Value"
-                          SelectedValue="{Binding SelectedSortField, Mode=TwoWay}" />
-                <Button Content="{Binding SortDirectionText}"
-                        Command="{Binding ToggleSortDirectionCommand}"
-                        Padding="8,3"
-                        Margin="0,0,5,0" />
-                <Button Content="Clear"
-                        Command="{Binding ClearQueryCommand}"
-                        Padding="8,3"
-                        Margin="0,0,10,0" />
-                <TextBlock Text="{Binding EntryCountText, StringFormat=Showing: {0}}"
-                           VerticalAlignment="Center"
-                           Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
-            </WrapPanel>
-
-            <WrapPanel Grid.Row="2" Margin="0,0,0,5" VerticalAlignment="Center">
-                <TextBox Width="145"
-                         Margin="0,0,5,0"
-                         Padding="5,3"
-                         Text="{Binding NewGroupName, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="New group name" />
-                <Button Content="Create group" Command="{Binding CreateGroupCommand}" Padding="8,3" Margin="0,0,5,0" />
-                <TextBox Width="145"
-                         Margin="0,0,5,0"
-                         Padding="5,3"
-                         Text="{Binding RenameGroupName, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="Selected group name" />
-                <Button Content="Rename" Command="{Binding RenameGroupCommand}" Padding="8,3" Margin="0,0,5,0" />
-                <Button Content="↑" Command="{Binding MoveGroupUpCommand}" Padding="8,3" Margin="0,0,2,0" ToolTip="Move group up" />
-                <Button Content="↓" Command="{Binding MoveGroupDownCommand}" Padding="8,3" Margin="0,0,5,0" ToolTip="Move group down" />
-                <Button Content="Delete group" Command="{Binding DeleteGroupCommand}" Padding="8,3" Margin="0,0,10,0" />
-                <TextBox Width="145"
-                         Margin="0,0,5,0"
-                         Padding="5,3"
-                         Text="{Binding ManualInternalName, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="Manual Pal internal name" />
-                <Button Content="Add manual" Command="{Binding AddManualDefinitionCommand}" Padding="8,3" Margin="0,0,2,0" />
-                <Button Content="Update manual" Command="{Binding UpdateManualDefinitionCommand}" Padding="8,3" Margin="0,0,5,0" />
-                <Button Content="Add source" Command="{Binding AddSelectedSourceCommand}" Padding="8,3" Margin="0,0,2,0" />
-                <Button Content="Rebind" Command="{Binding RebindSelectedEntryCommand}" Padding="8,3" Margin="0,0,2,0" />
-                <Button Content="Resolve matching" Command="{Binding BulkRebindMatchingMembersCommand}" Padding="8,3" Margin="0,0,2,0" />
-                <Button Content="Remove duplicates" Command="{Binding RemoveDuplicateMembersCommand}" Padding="8,3" Margin="0,0,2,0" />
-                <Button Content="Remove member" Command="{Binding RemoveSelectedEntryCommand}" Padding="8,3" Margin="0,0,5,0" />
-                <Button Content="Create document" Command="{Binding CreateDocumentCommand}" Padding="8,3" Margin="0,0,5,0" />
-                <Button Content="Repair recovered" Command="{Binding RepairRecoveredDocumentCommand}" Padding="8,3" Margin="0,0,5,0" />
-                <Button Content="Save" Command="{Binding SaveCommand}" Padding="8,3" Margin="0,0,10,0" />
-                <TextBlock Text="{Binding EditStatus}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-            </WrapPanel>
-
-            <Expander Grid.Row="3"
-                      Header="Recovery details"
-                      IsExpanded="False"
-                      Visibility="{Binding HasDiagnostics, Converter={StaticResource VVC}}"
-                      Margin="0,0,0,5">
-                <StackPanel>
-                    <TextBlock Text="{Binding RecoveryGuidance}"
-                               TextWrapping="Wrap"
-                               Margin="0,0,0,5"
-                               Visibility="{Binding RecoveryGuidance, Converter={StaticResource VVC}}" />
-                    <ListBox ItemsSource="{Binding Diagnostics}"
-                             BorderThickness="0"
-                             Background="Transparent"
-                             MaxHeight="100">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,2" />
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </StackPanel>
-            </Expander>
-
-            <Expander Grid.Row="4"
-                      Header="{Binding OrphanedDocumentCountText}"
-                      IsExpanded="False"
-                      Visibility="{Binding HasOrphanedDocuments, Converter={StaticResource VVC}}"
-                      Margin="0,0,0,5">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <ListView Grid.Row="0"
-                              ItemsSource="{Binding OrphanedDocuments}"
-                              SelectedItem="{Binding SelectedOrphanedDocument, Mode=TwoWay}"
-                              MaxHeight="120"
-                              BorderThickness="0"
-                              Background="Transparent"
-                              ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                        <ListView.View>
-                            <GridView AllowsColumnReorder="False">
-                                <GridViewColumn Header="Owner" DisplayMemberBinding="{Binding OwnerLabel}" Width="160" />
-                                <GridViewColumn Header="Reason" DisplayMemberBinding="{Binding Reason}" Width="300" />
-                                <GridViewColumn Header="Document" DisplayMemberBinding="{Binding DocumentPath}" Width="500" />
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
-                        <Button Content="Refresh orphaned"
-                                Command="{Binding RefreshOrphanedDocumentsCommand}"
-                                Padding="8,3"
-                                Margin="0,0,5,0" />
-                        <Button Content="Delete selected orphan"
-                                Command="{Binding DeleteSelectedOrphanedDocumentCommand}"
-                                Padding="8,3" />
-                    </StackPanel>
-                </Grid>
-            </Expander>
-
-            <Grid Grid.Row="5">
+            <Grid Grid.Row="1" Margin="0,0,0,7">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="230" MinWidth="180" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding CollectionSummaryText}" />
+                    <Button Content="{itl:LocalizedText LC_YOUR_PALS_REVIEW_ATTENTION}"
+                            Command="{Binding ReviewAttentionCommand}"
+                            Visibility="{Binding HasAttentionEntries, Converter={StaticResource VVC}}"
+                            HorizontalAlignment="Left"
+                            Padding="7,2"
+                            Margin="0,4,0,0"
+                            TabIndex="3"
+                            AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_REVIEW_ATTENTION}" />
+                    <TextBlock Text="{Binding EditStatus}"
+                               Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
+                               TextTrimming="CharacterEllipsis"
+                               Visibility="{Binding EditStatus, Converter={StaticResource VVC}}" />
+                </StackPanel>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding SaveStateText}"
+                           FontWeight="SemiBold"
+                           Style="{StaticResource SaveStateTextStyle}" />
+            </Grid>
+
+            <StackPanel Grid.Row="2" Margin="0,0,0,7">
+                <Border
+                    Padding="8"
+                    Margin="0,0,0,6"
+                    BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}"
+                    BorderThickness="1"
+                    Visibility="{Binding HasDiagnostics, Converter={StaticResource VVC}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding RecoveryGuidance}" TextWrapping="Wrap" Visibility="{Binding RecoveryGuidance, Converter={StaticResource VVC}}" />
+                    <TextBlock Text="{Binding SaveStateText}" Margin="0,3,0,0" />
+                </StackPanel>
+                </Border>
+                <Border Padding="8"
+                        BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
+                        BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_SOLVER_CARD_TITLE}" FontWeight="SemiBold" />
+                        <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_SOLVER_CARD_DESCRIPTION}" TextWrapping="Wrap" Margin="0,2,0,5" Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                        <CheckBox Content="{itl:LocalizedText LC_YOUR_PALS_USE_AS_SOLVER_SOURCE}"
+                                  IsChecked="{Binding UseAsSolverSource, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanEdit}"
+                                  Margin="0,0,0,4"
+                                  AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_USE_AS_SOLVER_SOURCE}" />
+                        <TextBlock Text="{Binding SolverSourceStateText}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding SolverSourceSummaryText}" />
+                        <TextBlock Text="{Binding SolverSourceExcludedText}"
+                                   Visibility="{Binding SolverExcludedCount, Converter={StaticResource VVC}}"
+                                   Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                        <TextBlock Text="{Binding SolverSourceMissingText}"
+                                   TextWrapping="Wrap"
+                                   Visibility="{Binding HasSolverMissingEntries, Converter={StaticResource VVC}}"
+                                   Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}" />
+                        <TextBlock Text="{Binding SolverSourceEmptyText}"
+                                   TextWrapping="Wrap"
+                                   Visibility="{Binding IsSolverSourceEmpty, Converter={StaticResource VVC}}"
+                                   Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <Grid x:Name="CollectionLayoutGrid"
+                  Grid.Row="3">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="5" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="170" MinWidth="125" />
                     <ColumnDefinition Width="5" />
-                    <ColumnDefinition Width="*" MinWidth="360" />
+                    <ColumnDefinition Width="*" MinWidth="240" />
                 </Grid.ColumnDefinitions>
 
-                <GroupBox Grid.Column="0" Header="Groups">
-                    <ListView ItemsSource="{Binding Groups}"
-                              SelectedItem="{Binding SelectedGroupSummary, Mode=TwoWay}"
-                              BorderThickness="0"
-                              Background="Transparent"
-                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                              VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Recycling">
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Border BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
-                                        BorderThickness="0,0,0,1"
-                                        Padding="5,4">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Text="{Binding MemberCount, StringFormat=Members: {0}}" FontSize="11" />
-                                        <TextBlock Text="{Binding StatusSummary}" FontSize="10" TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
+                <GroupBox x:Name="GroupPanel"
+                          Grid.Column="0"
+                          Header="{itl:LocalizedText LC_YOUR_PALS_GROUPS}"
+                          AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_GROUPS}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <ToggleButton Grid.Row="0"
+                                      Content="{itl:LocalizedText LC_YOUR_PALS_ALL_PALS}"
+                                      IsChecked="{Binding IsAllPalsSelected, Mode=OneWay}"
+                                      Command="{Binding ShowAllPalsCommand}"
+                                      Padding="5,3"
+                                      Margin="0,0,0,3"
+                                      TabIndex="4"
+                                      AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_ALL_PALS}" />
+                        <Grid Grid.Row="1">
+                            <ListView ItemsSource="{Binding Groups}"
+                                      SelectedItem="{Binding SelectedGroupSummary, Mode=TwoWay}"
+                                      BorderThickness="0"
+                                      Background="Transparent"
+                                      MaxHeight="350"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      VirtualizingPanel.VirtualizationMode="Recycling"
+                                      TabIndex="6"
+                                      AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_GROUPS}">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
+                                                BorderThickness="0,0,0,1"
+                                                Padding="5,4">
+                                            <Border.ContextMenu>
+                                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                    <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_RENAME_GROUP}" Click="RenameGroup_Click" />
+                                                    <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_MOVE_GROUP_UP}" Click="MoveGroupUp_Click" />
+                                                    <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_MOVE_GROUP_DOWN}" Click="MoveGroupDown_Click" />
+                                                    <Separator />
+                                                    <MenuItem Header="{itl:LocalizedText LC_YOUR_PALS_DELETE_GROUP}" Click="DeleteGroup_Click" />
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock FontSize="11" Text="{Binding MemberCountText}" />
+                                                <TextBlock Text="{Binding AttentionText}"
+                                                           FontSize="10"
+                                                           Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}"
+                                                           Visibility="{Binding AttentionCount, Converter={StaticResource VVC}}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                            <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_NO_GROUPS}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       Visibility="{Binding HasGroups, Converter={StaticResource VVC_Negate}}" />
+                        </Grid>
+                        <Button Grid.Row="2"
+                                Content="{itl:LocalizedText LC_YOUR_PALS_NEW_GROUP}"
+                                Click="NewGroup_Click"
+                                IsEnabled="{Binding CanEdit}"
+                                Padding="5,3"
+                                Margin="0,4,0,0"
+                                TabIndex="5"
+                                AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_NEW_GROUP}" />
+                    </Grid>
                 </GroupBox>
 
-                <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" />
+                <GridSplitter x:Name="GroupCollectionSplitter"
+                              Grid.Column="1"
+                              Width="5"
+                              HorizontalAlignment="Center"
+                              AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_RESIZE_GROUPS}" />
 
-                <Grid Grid.Column="2">
+                <Grid x:Name="CollectionPanel" Grid.Column="2">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="Saved group members" FontWeight="SemiBold" Margin="0,0,0,4" />
-                    <Grid Grid.Row="1">
+                    <Grid Grid.Row="0" Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding SelectedCollectionTitle}" FontSize="16" FontWeight="SemiBold" />
+                        <Button Grid.Column="1"
+                                Content="{itl:LocalizedText LC_YOUR_PALS_ADD_PAL}"
+                                Command="{Binding AddPalCommand}"
+                                Padding="9,3"
+                                Margin="5,0,8,0"
+                                TabIndex="7"
+                                AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_ADD_PAL}" />
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding ShowingText}"
+                                   Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                    </Grid>
+                    <Grid Grid.Row="1" Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="125" />
+                            <ColumnDefinition Width="115" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Column="0">
+                            <TextBox x:Name="SearchTextBox"
+                                     Padding="5,3"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="{itl:LocalizedText LC_YOUR_PALS_SEARCH_THIS_GROUP}"
+                                     TabIndex="8"
+                                     AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_SEARCH_THIS_GROUP}" />
+                            <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_SEARCH_THIS_GROUP}"
+                                       Margin="10,0,5,0"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
+                                       IsHitTestVisible="False"
+                                       Visibility="{Binding HasSearchText, Converter={StaticResource VVC_Negate}}" />
+                        </Grid>
+                        <ComboBox Grid.Column="1"
+                                  Margin="5,0,0,0"
+                                  ItemsSource="{Binding StatusFilterOptions}"
+                                  DisplayMemberPath="Label"
+                                  SelectedValuePath="Value"
+                                  SelectedValue="{Binding SelectedStatusFilter, Mode=TwoWay}"
+                                  TabIndex="9"
+                                  AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_STATUS}" />
+                        <ComboBox Grid.Column="2"
+                                  Margin="5,0,0,0"
+                                  ItemsSource="{Binding SortOptions}"
+                                  DisplayMemberPath="Label"
+                                  SelectedValuePath="Value"
+                                  SelectedValue="{Binding SelectedSortField, Mode=TwoWay}"
+                                  TabIndex="10"
+                                  AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_SORT}" />
+                        <Button Grid.Column="3"
+                                Content="{Binding SortDirectionText}"
+                                Command="{Binding ToggleSortDirectionCommand}"
+                                Padding="6,3"
+                                Margin="5,0,0,0"
+                                TabIndex="11"
+                                AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_SORT_DIRECTION}" />
+                        <Button Grid.Column="4"
+                                Content="{itl:LocalizedText LC_YOUR_PALS_CLEAR}"
+                                Command="{Binding ClearQueryCommand}"
+                                Padding="6,3"
+                                Margin="5,0,0,0"
+                                TabIndex="12"
+                                AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_CLEAR}"
+                                Visibility="{Binding HasTextOrStatusQuery, Converter={StaticResource VVC}}" />
+                    </Grid>
+                    <Grid Grid.Row="2">
                         <ListView ItemsSource="{Binding Entries}"
                                   SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
                                   BorderThickness="0"
                                   Background="Transparent"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                  MaxHeight="350"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                   ScrollViewer.CanContentScroll="True"
                                   VirtualizingPanel.IsVirtualizing="True"
                                   VirtualizingPanel.VirtualizationMode="Recycling"
-                                  HorizontalContentAlignment="Stretch">
+                                  HorizontalContentAlignment="Stretch"
+                                  TabIndex="13"
+                                  AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_SAVED_GROUP_MEMBERS}"
+                                  Visibility="{Binding HasEntries, Converter={StaticResource VVC}}">
                             <ListView.View>
                                 <GridView AllowsColumnReorder="False">
-                                    <GridViewColumn Header="Group" DisplayMemberBinding="{Binding GroupName}" Width="130" />
-                                    <GridViewColumn Header="Pal" DisplayMemberBinding="{Binding PalName}" Width="150" />
-                                    <GridViewColumn Header="Status" Width="105">
+                                    <GridViewColumn x:Name="PalColumn" Header="{itl:LocalizedText LC_YOUR_PALS_PAL}" Width="185">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Status}" Style="{StaticResource StatusTextStyle}" />
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="32" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Image Source="{Binding Icon}" Width="28" Height="28" Stretch="Uniform" />
+                                                    <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                                                        <TextBlock Text="{Binding PalName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding Nickname}" FontSize="10" Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </Grid>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
-                                    <GridViewColumn Header="Source" DisplayMemberBinding="{Binding SourceScope}" Width="170" />
-                                    <GridViewColumn Header="Instance" DisplayMemberBinding="{Binding InstanceId}" Width="130" />
-                                    <GridViewColumn Header="Key" DisplayMemberBinding="{Binding PalEntryKey}" Width="130" />
-                                    <GridViewColumn Header="Details" DisplayMemberBinding="{Binding Details}" Width="260" />
+                                    <GridViewColumn x:Name="LevelColumn" Header="{itl:LocalizedText LC_COMMON_LEVEL}" DisplayMemberBinding="{Binding Level}" Width="55" />
+                                    <GridViewColumn x:Name="GenderColumn" Header="{itl:LocalizedText LC_COMMON_GENDER}" DisplayMemberBinding="{Binding Gender}" Width="75" />
+                                    <GridViewColumn x:Name="LocationColumn" Header="{itl:LocalizedText LC_COMMON_LOCATION}" DisplayMemberBinding="{Binding Location}" Width="120" />
+                                    <GridViewColumn x:Name="StatusColumn" Header="{itl:LocalizedText LC_YOUR_PALS_STATUS}" Width="230">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding StatusLabel}" Style="{StaticResource StatusTextStyle}" />
+                                                    <TextBlock Text="{Binding StatusExplanation}"
+                                                               FontSize="10"
+                                                               TextWrapping="Wrap"
+                                                               Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                                                    <Button Content="{Binding AttentionActionText}"
+                                                            Command="{Binding DataContext.RepairEntryCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                                                            CommandParameter="{Binding}"
+                                                            Visibility="{Binding AttentionActionText, Converter={StaticResource VVC}}"
+                                                            HorizontalAlignment="Left"
+                                                            Padding="6,1"
+                                                            Margin="0,3,0,0"
+                                                            AutomationProperties.Name="{Binding AttentionActionText}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn x:Name="GroupColumn" Header="{itl:LocalizedText LC_YOUR_PALS_GROUPS}" DisplayMemberBinding="{Binding GroupName}" Width="125" />
                                 </GridView>
                             </ListView.View>
                         </ListView>
-                        <TextBlock Text="No saved group members."
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontStyle="Italic"
-                                   Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
-                                   Visibility="{Binding HasEntries, Converter={StaticResource VVC_Negate}}" />
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel Visibility="{Binding HasGroups, Converter={StaticResource VVC_Negate}}">
+                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_NO_GROUPS}" FontWeight="SemiBold" TextAlignment="Center" FontStyle="Italic" />
+                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_NO_GROUPS_DESCRIPTION}" TextWrapping="Wrap" MaxWidth="300" TextAlignment="Center" FontStyle="Italic" />
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding HasEmptyCollection, Converter={StaticResource VVC}}">
+                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_EMPTY_COLLECTION}" FontWeight="SemiBold" TextAlignment="Center" FontStyle="Italic" />
+                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_EMPTY_COLLECTION_DESCRIPTION}" TextWrapping="Wrap" MaxWidth="300" TextAlignment="Center" FontStyle="Italic" />
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding HasNoQueryMatches, Converter={StaticResource VVC}}">
+                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_NO_QUERY_MATCHES}" FontWeight="SemiBold" TextAlignment="Center" FontStyle="Italic" />
+                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_NO_QUERY_MATCHES_DESCRIPTION}" TextWrapping="Wrap" MaxWidth="300" TextAlignment="Center" FontStyle="Italic" />
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding HasSourceUnavailableCollectionState, Converter={StaticResource VVC}}">
+                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_SOURCE_UNAVAILABLE}" FontWeight="SemiBold" TextAlignment="Center" FontStyle="Italic" />
+                                <Button Content="{itl:LocalizedText LC_YOUR_PALS_REFRESH}"
+                                        Command="{Binding RefreshCommand}"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,6,0,0"
+                                        AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_REFRESH}" />
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding HasNoSourceEntriesCollectionState, Converter={StaticResource VVC}}">
+                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_NO_SOURCE_ENTRIES}" FontWeight="SemiBold" TextAlignment="Center" FontStyle="Italic" />
+                                <Button Content="{itl:LocalizedText LC_YOUR_PALS_REFRESH}"
+                                        Command="{Binding RefreshCommand}"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,6,0,0"
+                                        AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_REFRESH}" />
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding CanCreateDocument, Converter={StaticResource VVC}}">
+                                <Button Content="{itl:LocalizedText LC_YOUR_PALS_CREATE_DOCUMENT}"
+                                        Command="{Binding CreateDocumentCommand}"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,8,0,0"
+                                        AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_CREATE_DOCUMENT}" />
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding HasGroups, Converter={StaticResource VVC_Negate}}">
+                                <Button Content="{itl:LocalizedText LC_YOUR_PALS_NEW_GROUP}"
+                                        Click="NewGroup_Click"
+                                        IsEnabled="{Binding CanEdit}"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,8,0,0"
+                                        AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_NEW_GROUP}" />
+                            </StackPanel>
+                        </StackPanel>
                     </Grid>
                 </Grid>
             </Grid>
 
-            <Expander Grid.Row="6"
-                      Header="Current source snapshot"
-                      IsExpanded="True"
-                      Visibility="{Binding HasSourceEntries, Converter={StaticResource VVC}}"
-                      Margin="0,5,0,0">
-                <ListView ItemsSource="{Binding SourceEntries}"
-                          SelectedItem="{Binding SelectedSourceEntry, Mode=TwoWay}"
-                          Height="180"
-                          BorderThickness="0"
-                          Background="Transparent"
-                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                          ScrollViewer.CanContentScroll="True"
-                          VirtualizingPanel.IsVirtualizing="True"
-                          VirtualizingPanel.VirtualizationMode="Recycling"
-                          HorizontalContentAlignment="Stretch">
-                    <ListView.View>
-                        <GridView AllowsColumnReorder="False">
-                            <GridViewColumn Header="Pal" DisplayMemberBinding="{Binding PalName}" Width="150" />
-                            <GridViewColumn Header="Level" DisplayMemberBinding="{Binding Level}" Width="55" />
-                            <GridViewColumn Header="Gender" DisplayMemberBinding="{Binding Gender}" Width="75" />
-                            <GridViewColumn Header="Location" DisplayMemberBinding="{Binding Location}" Width="130" />
-                            <GridViewColumn Header="Source" DisplayMemberBinding="{Binding SourceScope}" Width="170" />
-                            <GridViewColumn Header="Instance" DisplayMemberBinding="{Binding InstanceId}" Width="130" />
-                        </GridView>
-                    </ListView.View>
-                </ListView>
+            <Expander Grid.Row="4"
+                      Header="{itl:LocalizedText LC_YOUR_PALS_ADVANCED}"
+                      IsExpanded="False"
+                      Margin="0,7,0,0"
+                      AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_ADVANCED}">
+                <StackPanel>
+                    <StackPanel Margin="0,0,0,5">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_SESSION}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding SessionState}" Margin="5,0,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_SOURCE}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding SourceState}" Margin="5,0,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_SOURCE_UNAVAILABLE}"
+                               Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}"
+                               Visibility="{Binding IsSourceUnavailable, Converter={StaticResource VVC}}" />
+                    <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_NO_SOURCE_ENTRIES}"
+                               Foreground="{DynamicResource {x:Static adonisUi:Brushes.AlertBrush}}"
+                               Visibility="{Binding HasNoSourceEntries, Converter={StaticResource VVC}}" />
+                    <Expander Header="{itl:LocalizedText LC_YOUR_PALS_RECOVERY_DETAILS}"
+                              IsExpanded="False"
+                              Visibility="{Binding HasDiagnostics, Converter={StaticResource VVC}}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding RecoveryGuidance}" TextWrapping="Wrap" Margin="0,0,0,5" Visibility="{Binding RecoveryGuidance, Converter={StaticResource VVC}}" />
+                            <ListBox ItemsSource="{Binding Diagnostics}" BorderThickness="0" Background="Transparent" MaxHeight="100">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,2" /></DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Expander>
+                    <Expander Header="{Binding OrphanedDocumentCountText}"
+                              IsExpanded="False"
+                              Visibility="{Binding HasOrphanedDocuments, Converter={StaticResource VVC}}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ListView Grid.Row="0" ItemsSource="{Binding OrphanedDocuments}" SelectedItem="{Binding SelectedOrphanedDocument, Mode=TwoWay}" MaxHeight="120" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_ORPHANED_DOCUMENTS}">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="6" Margin="0,0,0,4" BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}" BorderThickness="0,0,0,1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_OWNER}" FontWeight="SemiBold" Margin="0,0,8,3" />
+                                                <TextBlock Grid.Column="1" Text="{Binding OwnerLabel}" TextWrapping="Wrap" Margin="0,0,0,3" />
+                                                <TextBlock Grid.Row="1" Text="{itl:LocalizedText LC_YOUR_PALS_REASON}" FontWeight="SemiBold" Margin="0,0,8,3" />
+                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Reason}" TextWrapping="Wrap" Margin="0,0,0,3" />
+                                                <TextBlock Grid.Row="2" Text="{itl:LocalizedText LC_YOUR_PALS_DOCUMENT}" FontWeight="SemiBold" Margin="0,0,8,0" />
+                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DocumentPath}" TextWrapping="Wrap" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
+                                <Button Content="{itl:LocalizedText LC_YOUR_PALS_REFRESH_ORPHANED}" Command="{Binding RefreshOrphanedDocumentsCommand}" Padding="8,3" Margin="0,0,5,0" />
+                                <Button Content="{itl:LocalizedText LC_YOUR_PALS_DELETE_SELECTED_ORPHAN}" Command="{Binding DeleteSelectedOrphanedDocumentCommand}" Padding="8,3" />
+                            </StackPanel>
+                        </Grid>
+                    </Expander>
+                    <Expander Header="{itl:LocalizedText LC_YOUR_PALS_CURRENT_SOURCE_SNAPSHOT}" IsExpanded="False" Visibility="{Binding HasSourceEntries, Converter={StaticResource VVC}}">
+                        <ListView ItemsSource="{Binding SourceEntries}" SelectedItem="{Binding SelectedSourceEntry, Mode=TwoWay}" Height="180" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_CURRENT_SOURCE_SNAPSHOT}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="6" Margin="0,0,0,4" BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}" BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_PAL}" FontWeight="SemiBold" Margin="0,0,8,3" />
+                                            <TextBlock Grid.Column="1" Text="{Binding PalName}" TextWrapping="Wrap" Margin="0,0,0,3" />
+                                            <TextBlock Grid.Row="1" Text="{itl:LocalizedText LC_COMMON_LEVEL}" FontWeight="SemiBold" Margin="0,0,8,3" />
+                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Level}" Margin="0,0,0,3" />
+                                            <TextBlock Grid.Row="2" Text="{itl:LocalizedText LC_COMMON_GENDER}" FontWeight="SemiBold" Margin="0,0,8,3" />
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Gender}" Margin="0,0,0,3" />
+                                            <TextBlock Grid.Row="3" Text="{itl:LocalizedText LC_COMMON_LOCATION}" FontWeight="SemiBold" Margin="0,0,8,3" />
+                                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Location}" TextWrapping="Wrap" Margin="0,0,0,3" />
+                                            <TextBlock Grid.Row="4" Text="{itl:LocalizedText LC_YOUR_PALS_SOURCE_COLUMN}" FontWeight="SemiBold" Margin="0,0,8,3" />
+                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SourceScope}" TextWrapping="Wrap" Margin="0,0,0,3" />
+                                            <TextBlock Grid.Row="5" Text="{itl:LocalizedText LC_YOUR_PALS_INSTANCE}" FontWeight="SemiBold" Margin="0,0,8,0" />
+                                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding InstanceId}" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Expander>
+                </StackPanel>
             </Expander>
+
+                </Grid>
+            </Border>
+        </ScrollViewer>
+
+        <Grid Grid.RowSpan="5"
+                  x:Name="DetailsOverlay"
+                  Panel.ZIndex="10"
+                  Background="#99000000"
+                  Visibility="{Binding IsDetailsOpen, Converter={StaticResource VVC}}"
+                  IsVisibleChanged="DetailsOverlay_IsVisibleChanged">
+                <Border Width="380"
+                        MaxHeight="560"
+                        Padding="16"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Stretch"
+                        Background="{DynamicResource {x:Static adonisUi:Brushes.Layer1BackgroundBrush}}"
+                        BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
+                        BorderThickness="1"
+                        KeyboardNavigation.TabNavigation="Cycle"
+                        FocusManager.IsFocusScope="True">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,10">
+                                <Button x:Name="DetailsCloseButton"
+                                        DockPanel.Dock="Right"
+                                        Content="×"
+                                        Command="{Binding CloseDetailsCommand}"
+                                        Padding="8,2"
+                                        ToolTip="{itl:LocalizedText LC_YOUR_PALS_CLOSE_DETAILS}"
+                                        AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_CLOSE_DETAILS}" />
+                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_PAL_DETAILS}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Image Source="{Binding SelectedEntry.Icon}" Width="72" Height="72" Stretch="Uniform" Margin="0,0,12,0" />
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding SelectedEntry.PalName}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding SelectedEntry.Nickname}" Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                                    <TextBlock Text="{Binding SelectedEntry.StatusLabel}" Style="{StaticResource StatusTextStyle}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <TextBlock Text="{Binding SelectedEntry.StatusExplanation}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{itl:LocalizedText LC_COMMON_LEVEL}" FontWeight="SemiBold" Margin="0,0,12,5" />
+                                <TextBlock Grid.Column="1" Text="{Binding SelectedEntry.Level}" Margin="0,0,0,5" />
+                                <TextBlock Grid.Row="1" Text="{itl:LocalizedText LC_COMMON_GENDER}" FontWeight="SemiBold" Margin="0,0,12,5" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedEntry.Gender}" Margin="0,0,0,5" />
+                                <TextBlock Grid.Row="2" Text="{itl:LocalizedText LC_COMMON_LOCATION}" FontWeight="SemiBold" Margin="0,0,12,5" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedEntry.Location}" Margin="0,0,0,5" />
+                                <TextBlock Grid.Row="3" Text="{itl:LocalizedText LC_YOUR_PALS_GROUPS}" FontWeight="SemiBold" Margin="0,0,12,5" />
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedEntry.GroupName}" Margin="0,0,0,5" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="4" Text="{itl:LocalizedText LC_YOUR_PALS_SOLVER_ELIGIBILITY}" FontWeight="SemiBold" Margin="0,0,12,5" />
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedEntry.StatusLabel}" Margin="0,0,0,5" />
+                                <TextBlock Grid.Row="5" Text="{itl:LocalizedText LC_YOUR_PALS_SOURCE_COLUMN}" FontWeight="SemiBold" Margin="0,0,12,5" />
+                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedEntry.SourceScope}" Margin="0,0,0,5" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="6" Text="{itl:LocalizedText LC_YOUR_PALS_KEY}" FontWeight="SemiBold" Margin="0,0,12,5" />
+                                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedEntry.SourceKey}" Margin="0,0,0,5" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="7" Text="{itl:LocalizedText LC_YOUR_PALS_INSTANCE}" FontWeight="SemiBold" Margin="0,0,12,5" />
+                                <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding SelectedEntry.InstanceId}" Margin="0,0,0,5" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="8" Text="{itl:LocalizedText LC_YOUR_PALS_DETAILS}" FontWeight="SemiBold" Margin="0,0,12,5" />
+                                <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding SelectedEntry.Details}" Margin="0,0,0,5" TextWrapping="Wrap" />
+                            </Grid>
+                            <Separator Margin="0,5,0,10" />
+                            <Button Content="{Binding AttentionActionText}"
+                                    Command="{Binding RepairSelectedEntryCommand}"
+                                    ToolTip="{Binding AttentionActionTooltip}"
+                                    Visibility="{Binding AttentionActionText, Converter={StaticResource VVC}}"
+                                    AutomationProperties.Name="{Binding AttentionActionText}"
+                                    Margin="0,0,0,6" />
+                            <Button Content="{itl:LocalizedText LC_YOUR_PALS_EDIT_MANUAL_PAL}"
+                                    Command="{Binding EditSelectedManualCommand}"
+                                    Visibility="{Binding CanEditSelectedManual, Converter={StaticResource VVC}}"
+                                    AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_EDIT_MANUAL_PAL}"
+                                    Margin="0,0,0,5" />
+                            <Button Content="{itl:LocalizedText LC_YOUR_PALS_REMOVE_FROM_GROUP}"
+                                    Command="{Binding RemoveSelectedEntryCommand}"
+                                    AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_REMOVE_FROM_GROUP}"
+                                    Visibility="{Binding CanEdit, Converter={StaticResource VVC}}" />
+                            <TextBlock Text="{Binding SelectedEntry.PalEntryKey}"
+                                       FontSize="10"
+                                       Margin="0,12,0,0"
+                                       Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+
+        <Grid Grid.RowSpan="5"
+                  x:Name="PickerOverlay"
+                  Panel.ZIndex="20"
+                  Background="#99000000"
+                  Visibility="{Binding IsAddPalPickerOpen, Converter={StaticResource VVC}}"
+                  IsVisibleChanged="PickerOverlay_IsVisibleChanged">
+                <Border MaxWidth="560"
+                        MaxHeight="{Binding ActualHeight, ElementName=PickerOverlay}"
+                        Margin="8"
+                        Padding="16"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource {x:Static adonisUi:Brushes.Layer1BackgroundBrush}}"
+                        BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}"
+                        BorderThickness="1"
+                        KeyboardNavigation.TabNavigation="Cycle"
+                        FocusManager.IsFocusScope="True">
+                    <ScrollViewer x:Name="PickerScrollViewer"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  CanContentScroll="False"
+                                  Padding="0"
+                                  PreviewMouseWheel="PageScrollViewer_PreviewMouseWheel">
+                        <Grid>
+                        <StackPanel Visibility="{Binding IsManualEditorOpen, Converter={StaticResource VVC_Negate}}">
+                            <DockPanel Margin="0,0,0,8">
+                                <Button x:Name="PickerCloseButton" DockPanel.Dock="Right" Content="×" Command="{Binding CloseOverlayCommand}" Padding="8,2" ToolTip="{itl:LocalizedText LC_COMMON_CANCEL}" AutomationProperties.Name="{itl:LocalizedText LC_COMMON_CANCEL}" />
+                                <TextBlock Text="{Binding RepairPickerTitle}" FontSize="18" FontWeight="SemiBold" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding PickerContextText}" FontWeight="SemiBold" Margin="0,0,0,3" />
+                            <ComboBox ItemsSource="{Binding Groups}"
+                                      SelectedItem="{Binding SelectedAddGroup, Mode=TwoWay}"
+                                      DisplayMemberPath="Name"
+                                      Margin="0,0,0,8"
+                                      Visibility="{Binding IsRepairMode, Converter={StaticResource VVC_Negate}}"
+                                      AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_SELECT_GROUP}" />
+                            <Grid Margin="0,0,0,8">
+                                <TextBox Text="{Binding AddPalSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="{itl:LocalizedText LC_YOUR_PALS_SEARCH_SOURCE_PALS}"
+                                         AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_SEARCH_SOURCE_PALS}" />
+                                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_SEARCH_SOURCE_PALS}"
+                                           Margin="10,0,5,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
+                                           IsHitTestVisible="False"
+                                           Visibility="{Binding HasAddPalSearchText, Converter={StaticResource VVC_Negate}}" />
+                            </Grid>
+                            <ListView ItemsSource="{Binding AddPalOptions}"
+                                      SelectedItem="{Binding SelectedAddPal, Mode=TwoWay}"
+                                      Height="330"
+                                      BorderThickness="0"
+                                      Background="Transparent"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      ScrollViewer.CanContentScroll="True"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      VirtualizingPanel.VirtualizationMode="Recycling">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="6" BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}" BorderThickness="0,0,0,1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="42" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Image Source="{Binding Icon}" Width="36" Height="36" Stretch="Uniform" />
+                                                <StackPanel Grid.Column="1" Margin="8,0,8,0">
+                                                    <TextBlock Text="{Binding PalName}" FontWeight="SemiBold" />
+                                                    <TextBlock FontSize="11"><Run Text="{Binding Nickname}" /><Run Text=" · " /><Run Text="{Binding Gender}" /><Run Text=" · " /><Run Text="{Binding Level}" /><Run Text=" · " /><Run Text="{Binding Location}" /></TextBlock>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" Text="{Binding AlreadyInGroupText}" FontSize="10" Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                            <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_NO_SOURCE_MATCHES}" TextAlignment="Center" Margin="0,8" Visibility="{Binding HasAddPalOptions, Converter={StaticResource VVC_Negate}}" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                                <Button Content="{itl:LocalizedText LC_YOUR_PALS_ADD_MANUAL_PAL}" Command="{Binding OpenManualEditorCommand}" Padding="9,4" Margin="0,0,6,0" Visibility="{Binding IsRepairMode, Converter={StaticResource VVC_Negate}}" />
+                                <Button Content="{itl:LocalizedText LC_COMMON_CANCEL}" Command="{Binding CloseOverlayCommand}" Padding="9,4" />
+                                <Button Content="{Binding PickerActionText}" Command="{Binding AddSelectedPalCommand}" Padding="9,4" Margin="6,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Visibility="{Binding IsManualEditorOpen, Converter={StaticResource VVC}}"
+                                    IsVisibleChanged="ManualEditor_IsVisibleChanged">
+                            <DockPanel Margin="0,0,0,8">
+                                <Button x:Name="ManualCloseButton" DockPanel.Dock="Right" Content="×" Command="{Binding CancelManualEditorCommand}" Padding="8,2" ToolTip="{itl:LocalizedText LC_COMMON_CANCEL}" AutomationProperties.Name="{itl:LocalizedText LC_COMMON_CANCEL}" />
+                                <TextBlock Text="{Binding ManualEditorTitle}" FontSize="18" FontWeight="SemiBold" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding AddPalDestinationText}" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <Label Content="{itl:LocalizedText LC_YOUR_PALS_MANUAL_PAL}" Padding="0,0,0,3" />
+                            <ComboBox ItemsSource="{Binding ManualPalOptions}"
+                                      SelectedItem="{Binding SelectedManualPal, Mode=TwoWay}"
+                                      DisplayMemberPath="Name.Value"
+                                      TextSearch.TextPath="Name.Value"
+                                      IsEditable="True"
+                                      Margin="0,0,0,8"
+                                      AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_MANUAL_PAL}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,5,0">
+                                    <Label Content="{itl:LocalizedText LC_COMMON_LEVEL}" Padding="0,0,0,3" />
+                                    <TextBox Text="{Binding ManualLevelText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{itl:LocalizedText LC_COMMON_LEVEL}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                                    <Label Content="{itl:LocalizedText LC_COMMON_GENDER}" Padding="0,0,0,3" />
+                                    <ComboBox ItemsSource="{Binding ManualGenderOptions}" SelectedItem="{Binding SelectedManualGender}" DisplayMemberPath="Label.Value" AutomationProperties.Name="{itl:LocalizedText LC_COMMON_GENDER}" />
+                                </StackPanel>
+                            </Grid>
+                            <Label Content="{itl:LocalizedText LC_YOUR_PALS_NICKNAME}" Padding="0,8,0,3" />
+                            <TextBox Text="{Binding ManualNickname, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{itl:LocalizedText LC_YOUR_PALS_NICKNAME}" />
+                            <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_MANUAL_HELP}" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                                <Button Content="{itl:LocalizedText LC_COMMON_CANCEL}" Command="{Binding CancelManualEditorCommand}" Padding="9,4" />
+                                <Button Content="{Binding ManualEditorActionText}" Command="{Binding SaveManualEditorCommand}" Padding="9,4" Margin="6,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
         </Grid>
-    </Border>
 </UserControl>

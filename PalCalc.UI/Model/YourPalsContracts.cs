@@ -155,6 +155,8 @@ namespace PalCalc.UI.Model
         public string Kind { get; set; }
         public SourceIdentity? SourceIdentity { get; set; }
         public string SourceKey { get; set; }
+        // Optional so documents written before conflict-copy selection remain readable.
+        public string SourceContentFingerprint { get; set; }
         public string InstanceId { get; set; }
         public string LastKnownInternalName { get; set; }
         public string LastKnownDisplayName { get; set; }
@@ -174,6 +176,7 @@ namespace PalCalc.UI.Model
             Kind = "imported-reference",
             SourceIdentity = reference.SourceIdentity,
             SourceKey = reference.SourceKey,
+            SourceContentFingerprint = reference.SourceContentFingerprint,
             InstanceId = reference.InstanceId,
             LastKnownInternalName = reference.LastKnownInternalName,
             LastKnownDisplayName = reference.LastKnownDisplayName,
@@ -191,6 +194,7 @@ namespace PalCalc.UI.Model
     {
         public SourceIdentity SourceIdentity { get; init; }
         public string SourceKey { get; init; }
+        public string SourceContentFingerprint { get; init; }
         public string InstanceId { get; init; }
         public string LastKnownInternalName { get; init; }
         public string LastKnownDisplayName { get; init; }
@@ -340,6 +344,17 @@ namespace PalCalc.UI.Model
                     .ToList();
                 if (sourceKeyMatches.Count == 1)
                     matches = sourceKeyMatches;
+                else if (!string.IsNullOrWhiteSpace(member.SourceContentFingerprint))
+                {
+                    var fingerprintMatches = sourceKeyMatches
+                        .Where(source => string.Equals(
+                            source.ContentFingerprint,
+                            member.SourceContentFingerprint,
+                            StringComparison.Ordinal))
+                        .ToList();
+                    if (fingerprintMatches.Count == 1)
+                        matches = fingerprintMatches;
+                }
             }
 
             if (matches.Count == 0)

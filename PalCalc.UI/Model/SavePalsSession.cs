@@ -50,6 +50,7 @@ namespace PalCalc.UI.Model
         public IReadOnlyList<YourPalsDiagnostic> Diagnostics => diagnostics.AsReadOnly();
         public SavePalsSessionState State { get; private set; }
         public bool IsDirty => isDirty;
+        public bool IsSourceAvailable => sourceLoadFailureDiagnostic == null && SourceSnapshot?.IsAvailable == true;
         public bool IsRecoveredFromBackup => loadedDocument?.ContentPath != null &&
             !string.Equals(loadedDocument.ContentPath, loadedDocument.DocumentPath, StringComparison.Ordinal);
         public bool HasUnrecoverableRecoveryData => Document?.HasUnrecoverableRecoveryData == true;
@@ -71,7 +72,7 @@ namespace PalCalc.UI.Model
             !hasExternalConflict;
 
         public bool CanUseSourceEntry(YourPalsSourceEntry sourceEntry) =>
-            SourceSnapshot?.IsSelectableForImport(sourceEntry) == true;
+            IsSourceAvailable && SourceSnapshot?.IsSelectableForImport(sourceEntry) == true;
 
         public bool TryCreateDocument(out string error)
         {
@@ -261,6 +262,7 @@ namespace PalCalc.UI.Model
                     {
                         SourceIdentity = sourceEntry.SourceIdentity,
                         SourceKey = sourceEntry.SourceKey,
+                        SourceContentFingerprint = sourceEntry.ContentFingerprint,
                         InstanceId = sourceEntry.InstanceId,
                         LastKnownInternalName = sourceEntry.Record?.Pal?.InternalName,
                         LastKnownDisplayName = sourceEntry.Record?.Pal?.Name,
@@ -325,11 +327,28 @@ namespace PalCalc.UI.Model
                         manualDefinitionId,
                         StringComparison.Ordinal));
                 if (definition == null)
-                    throw new InvalidOperationException("The selected manual definition no longer exists.");
+                {
+                    // Keep the member's stable reference and recreate the
+                    // missing definition in place when the user explicitly
+                    // repairs it through the manual editor.
+                    Document.ManualDefinitions ??= [];
+                    definition = new YourPalsManualDefinition
+                    {
+                        ManualDefinitionId = manualDefinitionId,
+                    };
+                    Document.ManualDefinitions.Add(definition);
+                }
 
                 definition.RawInternalName = normalizedName;
                 if (rawValues != null)
-                    definition.RawValues = CloneTokens(rawValues);
+                {
+                    // Keep fields written by newer versions or by the original
+                    // document while updating only the fields this editor owns.
+                    var mergedValues = CloneTokens(definition.RawValues);
+                    foreach (var pair in rawValues)
+                        mergedValues[pair.Key] = pair.Value?.DeepClone();
+                    definition.RawValues = mergedValues;
+                }
             }, out error);
         }
 
@@ -372,6 +391,7 @@ namespace PalCalc.UI.Model
 
                 member.SourceIdentity = sourceEntry.SourceIdentity;
                 member.SourceKey = sourceEntry.SourceKey;
+                member.SourceContentFingerprint = sourceEntry.ContentFingerprint;
                 member.InstanceId = sourceEntry.InstanceId;
                 member.LastKnownInternalName = sourceEntry.Record?.Pal?.InternalName;
                 member.LastKnownDisplayName = sourceEntry.Record?.Pal?.Name;
@@ -409,6 +429,7 @@ namespace PalCalc.UI.Model
                     }
 
                     member.SourceKey = sourceEntry.SourceKey;
+                    member.SourceContentFingerprint = sourceEntry.ContentFingerprint;
                     member.LastKnownInternalName = internalName;
                     member.LastKnownDisplayName = displayName;
                     repaired++;
@@ -419,6 +440,43 @@ namespace PalCalc.UI.Model
                         "No saved imported members matched the selected source identity and instance.");
             }, out error);
             repairedCount = repaired;
+            return succeeded;
+        }
+
+        public bool TryRemoveMissingMembers(out int removedCount, out string error)
+        {
+            var removed = 0;
+            var succeeded = TryMutate(() =>
+            {
+                // Every imported reference resolves as Stale when the save itself
+                // could not be read, so requiring a live source is what makes this
+                // bulk removal safe: it only ever runs against a save we can see.
+                if (!IsSourceAvailable)
+                {
+                    throw new InvalidOperationException(
+                        "Missing Pals can only be removed while the save source is available.");
+                }
+
+                // Match on the member instances from the current projection rather
+                // than on entry keys, so a document with duplicate keys cannot drop
+                // a member that is still present in the save.
+                var missing = ResolvedMembers
+                    .Where(resolved => resolved.Status == YourPalsEntryStatus.Stale && resolved.Member != null)
+                    .Select(resolved => resolved.Member)
+                    .ToHashSet();
+                if (missing.Count == 0)
+                    throw new InvalidOperationException("No saved Pals are missing from this save.");
+
+                foreach (var group in (Document.Groups ?? []).Where(group => group != null))
+                {
+                    var retained = (group.Members ?? [])
+                        .Where(member => !missing.Contains(member))
+                        .ToList();
+                    removed += (group.Members?.Count ?? 0) - retained.Count;
+                    group.Members = retained;
+                }
+            }, out error);
+            removedCount = removed;
             return succeeded;
         }
 
@@ -524,7 +582,10 @@ namespace PalCalc.UI.Model
                     Save = refreshedSave;
                 if (refreshedSourceLocation != null)
                     sourceLocation = refreshedSourceLocation;
-                if (cachedSave != null || refreshedSave != null)
+                // Cached data can be retained after a save disappears. Only a
+                // live save object from the session manager may reactivate an
+                // orphaned session.
+                if (refreshedSave != null)
                     isOrphaned = false;
                 if (!preserveSourceLoadFailure)
                     sourceLoadFailureDiagnostic = null;
@@ -539,7 +600,7 @@ namespace PalCalc.UI.Model
 
         public void RefreshCurrent()
         {
-            RefreshCore(CachedSave, sourceLocation, Save, preserveSourceLoadFailure: true);
+            RefreshCore(CachedSave, sourceLocation, refreshedSave: null, preserveSourceLoadFailure: true);
         }
 
         public bool TryDiscardChangesAndReload(out string error)
@@ -702,6 +763,10 @@ namespace PalCalc.UI.Model
                 try
                 {
                     mutation();
+                    // Deleting a group or member is the only way a manual definition
+                    // becomes unreachable; drop it here so removed groups do not keep
+                    // growing the document with data nothing can reference.
+                    YourPalsRepairOperations.PruneUnreferencedManualDefinitions(Document);
                     isDirty = true;
                     State = SavePalsSessionState.Dirty;
                     RebuildProjection();

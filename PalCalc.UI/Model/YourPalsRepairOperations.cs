@@ -13,7 +13,8 @@ namespace PalCalc.UI.Model
         int RemovedDuplicateMembers,
         int RemovedDuplicateManualDefinitions,
         int RemovedInvalidMembers,
-        int RemovedInvalidManualDefinitions)
+        int RemovedInvalidManualDefinitions,
+        int RemovedUnreferencedManualDefinitions = 0)
     {
         public int TotalChanges =>
             RepairedGroupIds +
@@ -22,7 +23,8 @@ namespace PalCalc.UI.Model
             RemovedDuplicateMembers +
             RemovedDuplicateManualDefinitions +
             RemovedInvalidMembers +
-            RemovedInvalidManualDefinitions;
+            RemovedInvalidManualDefinitions +
+            RemovedUnreferencedManualDefinitions;
     }
 
     internal static class YourPalsRepairOperations
@@ -154,7 +156,39 @@ namespace PalCalc.UI.Model
                 removedDuplicateMembers,
                 removedDuplicateManualDefinitions,
                 removedInvalidMembers,
-                removedInvalidManualDefinitions);
+                removedInvalidManualDefinitions,
+                PruneUnreferencedManualDefinitions(document));
+        }
+
+        // A manual definition is only reachable through the member that references
+        // it. Once every referencing member is gone (group deleted, member removed,
+        // duplicate dropped) the definition can never be shown or edited again, so
+        // it is dropped instead of being carried forward on every save.
+        public static int PruneUnreferencedManualDefinitions(YourPalsDocument document)
+        {
+            if (document == null) throw new ArgumentNullException(nameof(document));
+            if (document.ManualDefinitions == null || document.ManualDefinitions.Count == 0)
+                return 0;
+
+            var referenced = (document.Groups ?? [])
+                .Where(group => group != null)
+                .SelectMany(group => group.Members ?? [])
+                .Where(member => member?.KnownKind == YourPalsMemberKind.ManualDefinitionReference &&
+                    !string.IsNullOrWhiteSpace(member.ManualDefinitionId))
+                .Select(member => member.ManualDefinitionId)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var retained = document.ManualDefinitions
+                .Where(definition => definition != null &&
+                    !string.IsNullOrWhiteSpace(definition.ManualDefinitionId) &&
+                    referenced.Contains(definition.ManualDefinitionId))
+                .ToList();
+
+            var removed = document.ManualDefinitions.Count - retained.Count;
+            if (removed > 0)
+                document.ManualDefinitions = retained;
+
+            return removed;
         }
 
         public static YourPalsRepairSummary RemoveDuplicateMembers(YourPalsDocument document)
@@ -189,9 +223,12 @@ namespace PalCalc.UI.Model
                     retained.Add(member);
                 }
 
-                group.Members = retained;
+                if (retained.Count != (group.Members?.Count ?? 0))
+                    group.Members = retained;
             }
 
+            // Pruning is deliberately left to the caller: this operation reports
+            // "nothing to do" by leaving the document untouched when removed == 0.
             return new(0, 0, 0, removed, 0, 0, 0);
         }
 

@@ -125,7 +125,8 @@ namespace PalCalc.UI.ViewModel
             YourPals = new YourPalsViewModel(
                 yourPalsSession,
                 this.dispatcher,
-                yourPalsSessionManager);
+                yourPalsSessionManager,
+                refreshSource: () => selectedSave.ReloadSaveCommand.Execute(null));
             YourPals.PropertyChanged += YourPals_PropertyChanged;
             if (yourPalsSession != null)
                 yourPalsSession.Refreshed += YourPalsSession_Refreshed;

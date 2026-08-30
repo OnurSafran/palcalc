@@ -41,12 +41,20 @@ namespace PalCalc.UI.Model
             if (failure != null)
                 return failure;
 
+            // A conflicting instance may legitimately appear more than once (the
+            // "choose a copy" repair flow selects one of them), but the chosen copy
+            // must still be addressable on its own: the saved member records the
+            // source key and content fingerprint and resolves through them later.
+            // `entry` is always one of `matches`, so uniqueness has to be measured
+            // by counting the entries that share its fingerprint, not by asking
+            // whether any entry has it.
             var matches = Entries
                 .Where(candidate => candidate.SourceIdentity == entry.SourceIdentity &&
                     string.Equals(candidate.InstanceId, entry.InstanceId, StringComparison.Ordinal) &&
                     string.Equals(candidate.SourceKey, entry.SourceKey, StringComparison.Ordinal))
                 .ToList();
-            if (matches.Count != 1)
+            if (matches.Count != 1 && matches.Count(candidate =>
+                    string.Equals(candidate.ContentFingerprint, entry.ContentFingerprint, StringComparison.Ordinal)) != 1)
                 return "The selected source Pal has no unique source key in the active snapshot.";
 
             return null;

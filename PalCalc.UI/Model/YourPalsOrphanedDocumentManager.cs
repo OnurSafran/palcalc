@@ -49,7 +49,7 @@ namespace PalCalc.UI.Model
                 return [];
             }
 
-            foreach (var path in paths
+            foreach (var group in paths
                 .Where(path =>
                     string.Equals(Path.GetFileName(path), YourPalsContract.DocumentFileName, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(Path.GetFileName(path), YourPalsContract.DocumentFileName + ".bak", StringComparison.OrdinalIgnoreCase))
@@ -57,22 +57,44 @@ namespace PalCalc.UI.Model
                     string.Equals(Path.GetFileName(path), YourPalsContract.DocumentFileName + ".bak", StringComparison.OrdinalIgnoreCase)
                         ? path[..^4]
                         : path,
-                    StringComparer.OrdinalIgnoreCase)
-                .Select(group => group.OrderBy(path =>
-                    string.Equals(Path.GetFileName(path), YourPalsContract.DocumentFileName, StringComparison.OrdinalIgnoreCase) ? 0 : 1).First()))
+                    StringComparer.OrdinalIgnoreCase))
             {
-                var documentPath = string.Equals(
+                var documentPath = group.Key;
+                var primaryPath = group.FirstOrDefault(path => string.Equals(
+                    Path.GetFileName(path),
+                    YourPalsContract.DocumentFileName,
+                    StringComparison.OrdinalIgnoreCase));
+                var backupPath = group.FirstOrDefault(path => string.Equals(
                     Path.GetFileName(path),
                     YourPalsContract.DocumentFileName + ".bak",
-                    StringComparison.OrdinalIgnoreCase)
-                    ? path[..^4]
-                    : path;
-                if (!TryReadOwner(path, out var owner, out var reason))
+                    StringComparison.OrdinalIgnoreCase));
+
+                var primaryOwner = default(SaveIdentity);
+                var backupOwner = default(SaveIdentity);
+                string primaryReason = null;
+                string backupReason = null;
+                var primaryReadable = !string.IsNullOrWhiteSpace(primaryPath) &&
+                    TryReadOwner(primaryPath, out primaryOwner, out primaryReason);
+                var backupReadable = !string.IsNullOrWhiteSpace(backupPath) &&
+                    TryReadOwner(backupPath, out backupOwner, out backupReason);
+
+                if (primaryReadable && backupReadable && primaryOwner != backupOwner)
                 {
                     results.Add(new YourPalsOrphanedDocument(
                         Path.GetFullPath(documentPath),
                         null,
-                        reason));
+                        "The document and its backup have different owner identities; manual review is required."));
+                    continue;
+                }
+
+                var owner = primaryReadable ? primaryOwner : backupReadable ? backupOwner : default;
+                if (!primaryReadable && !backupReadable)
+                {
+                    results.Add(new YourPalsOrphanedDocument(
+                        Path.GetFullPath(documentPath),
+                        null,
+                        primaryReason ?? backupReason ??
+                        "The document owner identity could not be read; manual review is required."));
                     continue;
                 }
 
@@ -82,7 +104,9 @@ namespace PalCalc.UI.Model
                 results.Add(new YourPalsOrphanedDocument(
                     Path.GetFullPath(documentPath),
                     owner,
-                    "The owning save is not currently available."));
+                    primaryReadable
+                        ? "The owning save is not currently available."
+                        : "The primary document was unreadable; owner identity was recovered from its backup."));
             }
 
             return results
@@ -129,30 +153,42 @@ namespace PalCalc.UI.Model
                     }
                 }
 
-                var ownerPath = File.Exists(documentPath) ? documentPath : documentPath + ".bak";
-                var actualOwner = default(SaveIdentity);
-                string ownerReadError = null;
-                if (!orphan.OwnerSaveIdentity.HasValue ||
-                    !TryReadOwner(ownerPath, out actualOwner, out ownerReadError))
-                {
-                    error = ownerReadError ??
-                        "The selected orphaned document has no verifiable owner identity.";
-                    return false;
-                }
-
-                if (orphan.OwnerSaveIdentity.Value != actualOwner)
-                {
-                    error = "The selected orphaned document no longer matches its recorded owner.";
-                    return false;
-                }
-
+                var primaryOwner = default(SaveIdentity);
+                var backupOwner = default(SaveIdentity);
+                var primaryReadable = File.Exists(documentPath) &&
+                    TryReadOwner(documentPath, out primaryOwner, out _);
                 var backupPath = documentPath + ".bak";
-                if (File.Exists(documentPath) &&
-                    File.Exists(backupPath) &&
-                    TryReadOwner(backupPath, out var backupOwner, out _) &&
-                    backupOwner != actualOwner)
+                var backupReadable = File.Exists(backupPath) &&
+                    TryReadOwner(backupPath, out backupOwner, out _);
+
+                var ownerIsVerifiable = primaryReadable || backupReadable;
+                if (primaryReadable && backupReadable && primaryOwner != backupOwner)
+                    ownerIsVerifiable = false;
+
+                // An orphan listed without an owner is a damaged document, or one
+                // whose backup disagrees with it. There is nothing left to verify
+                // it against, but the path check above already proved it is one of
+                // Pal Calc's own documents inside its data directory - never a game
+                // save - so it can still be removed. Anything that *is* verifiable
+                // must match what the caller was shown, otherwise the file changed
+                // since the list was built and the deletion is refused.
+                if (orphan.OwnerSaveIdentity.HasValue)
                 {
-                    error = "The document backup has a different owner identity and was not deleted.";
+                    if (!ownerIsVerifiable)
+                    {
+                        error = "The selected orphaned document no longer has a verifiable owner; refresh the list before deleting it.";
+                        return false;
+                    }
+
+                    if (orphan.OwnerSaveIdentity.Value != (primaryReadable ? primaryOwner : backupOwner))
+                    {
+                        error = "The selected orphaned document no longer matches its recorded owner.";
+                        return false;
+                    }
+                }
+                else if (ownerIsVerifiable)
+                {
+                    error = "The selected orphaned document now has a readable owner identity; refresh the list before deleting it.";
                     return false;
                 }
 

@@ -113,7 +113,11 @@
                     <ListView ItemsSource="{Binding Slots}"
                               SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=local:SaveDetailsView}, Path=DataContext.SelectedSlot}"
                               IsSynchronizedWithCurrentItem="True"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              ScrollViewer.CanContentScroll="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
                               ItemContainerStyle="{StaticResource StandardListViewItemStyle}"
                               >
                         <ListView.ItemsPanel>

@@ -88,6 +88,7 @@ namespace PalCalc.UI.Persistence.Serialization
                 Kind = dto.Kind,
                 SourceIdentity = dto.SourceIdentity == null ? null : ToRuntime(dto.SourceIdentity),
                 SourceKey = dto.SourceKey,
+                SourceContentFingerprint = dto.SourceContentFingerprint,
                 InstanceId = dto.InstanceId,
                 LastKnownInternalName = dto.LastKnownInternalName,
                 LastKnownDisplayName = dto.LastKnownDisplayName,
@@ -146,6 +147,7 @@ namespace PalCalc.UI.Persistence.Serialization
                     ? null
                     : ToDto(member.SourceIdentity.Value, sourceIdentityExtensionData),
                 SourceKey = member.SourceKey,
+                SourceContentFingerprint = member.SourceContentFingerprint,
                 InstanceId = member.InstanceId,
                 LastKnownInternalName = member.LastKnownInternalName,
                 LastKnownDisplayName = member.LastKnownDisplayName,

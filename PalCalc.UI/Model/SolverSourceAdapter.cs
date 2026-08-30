@@ -27,10 +27,11 @@ namespace PalCalc.UI.Model
     internal static class SolverSourceAdapter
     {
         public static YourPalsSolverSourceProjection Build(SavePalsSession session) =>
-            Build(session?.ResolvedMembers);
+            Build(session?.ResolvedMembers, session?.IsSourceAvailable == true);
 
         public static YourPalsSolverSourceProjection Build(
-            IEnumerable<YourPalsResolvedMember> resolvedMembers)
+            IEnumerable<YourPalsResolvedMember> resolvedMembers,
+            bool sourceAvailable = true)
         {
             var entries = new List<YourPalsSolverSourceEntry>();
             var excluded = new List<YourPalsResolvedMember>();
@@ -39,7 +40,8 @@ namespace PalCalc.UI.Model
             foreach (var resolved in resolvedMembers ?? [])
             {
                 var record = resolved?.ResolvedRecord ?? resolved?.SourceEntry?.Record;
-                if (resolved?.Status != YourPalsEntryStatus.Resolved ||
+                if ((resolved?.Member?.KnownKind == YourPalsMemberKind.ImportedReference && !sourceAvailable) ||
+                    resolved?.Status != YourPalsEntryStatus.Resolved ||
                     !YourPalsSourceEligibility.IsUsable(record))
                 {
                     if (resolved != null)

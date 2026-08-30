@@ -34,6 +34,73 @@ public class YourPalsSessionTests
     }
 
     [TestMethod]
+    public void ConflictingSourceCopiesCanBeSelectedAndPersistedByFingerprint()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var pal = PalDB.LoadEmbedded().Pals.First();
+            var male = SourcePal(pal, "conflict-instance", PalGender.MALE);
+            var female = SourcePal(pal, "conflict-instance", PalGender.FEMALE);
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, "save-1", YourPalsContract.DocumentFileName));
+            var sourceIdentity = SourceIdentity.ForSave(owner);
+            store.Save(store.CreateNew(owner), new YourPalsDocument
+            {
+                OwnerSaveIdentity = owner,
+                Groups =
+                [
+                    new YourPalsGroup
+                    {
+                        GroupId = "group-1",
+                        Name = "Favorites",
+                        Members =
+                        [
+                            YourPalsMember.Imported(new ImportedPalReference
+                            {
+                                SourceIdentity = sourceIdentity,
+                                SourceKey = "Palbox:box-1:0",
+                                InstanceId = "conflict-instance",
+                            }, "entry-1"),
+                        ],
+                    },
+                ],
+            });
+
+            using var session = new SavePalsSession(
+                save,
+                null,
+                Cached(owner, male, female),
+                store);
+
+            var copies = session.SourceSnapshot.Entries
+                .Where(entry => entry.InstanceId == "conflict-instance")
+                .ToList();
+            Assert.HasCount(2, copies);
+            Assert.IsTrue(copies.All(session.CanUseSourceEntry));
+            Assert.AreEqual(YourPalsEntryStatus.Conflict, session.ResolvedMembers.Single().Status);
+
+            Assert.IsTrue(session.TryRebindImportedMember(
+                "group-1",
+                "entry-1",
+                copies[0],
+                out var error), error);
+            Assert.AreEqual(YourPalsEntryStatus.Resolved, session.ResolvedMembers.Single().Status);
+            Assert.AreEqual(
+                copies[0].ContentFingerprint,
+                session.Document.Groups.Single().Members.Single().SourceContentFingerprint);
+            Assert.IsTrue(session.TrySave());
+
+            using var reloaded = new SavePalsSession(save, null, Cached(owner, male, female), store);
+            Assert.AreEqual(YourPalsEntryStatus.Resolved, reloaded.ResolvedMembers.Single().Status);
+            Assert.AreEqual(
+                copies[0].ContentFingerprint,
+                reloaded.Document.Groups.Single().Members.Single().SourceContentFingerprint);
+        });
+    }
+
+    [TestMethod]
     public void SourceSnapshotSelectsDuplicateRecordsByStableContentOrder()
     {
         var owner = new SaveIdentity("user-1", "save-1");
@@ -300,6 +367,49 @@ public class YourPalsSessionTests
     }
 
     [TestMethod]
+    public void SourceLoadFailureDoesNotAllowStaleSourceEntriesIntoImportsOrSolver()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, YourPalsContract.DocumentFileName));
+            var sourcePal = SourcePal(PalDB.LoadEmbedded().Pals.First(), "instance-1", PalGender.MALE);
+            store.Save(store.CreateNew(owner), new YourPalsDocument
+            {
+                OwnerSaveIdentity = owner,
+                Groups =
+                [
+                    new YourPalsGroup
+                    {
+                        GroupId = "favorites",
+                        Name = "Favorites",
+                        Members =
+                        [YourPalsMember.Imported(new ImportedPalReference
+                        {
+                            SourceIdentity = SourceIdentity.ForSave(owner),
+                            SourceKey = "Palbox:box-1:0",
+                            InstanceId = sourcePal.InstanceId,
+                            LastKnownInternalName = sourcePal.Pal.InternalName,
+                        }, "entry-1")],
+                    },
+                ],
+            });
+
+            using var session = new SavePalsSession(save, null, Cached(owner, sourcePal), store);
+            var sourceEntry = session.SourceSnapshot.Entries.Single();
+
+            session.RecordSourceLoadFailure(new IOException("source unavailable"));
+
+            Assert.IsFalse(session.IsSourceAvailable);
+            Assert.IsFalse(session.CanUseSourceEntry(sourceEntry));
+            Assert.IsEmpty(session.BuildSolverSource().Entries);
+            Assert.HasCount(1, session.BuildSolverSource().ExcludedEntries);
+        });
+    }
+
+    [TestMethod]
     public void ASourceEntryFromAnotherSessionCannotBeAdded()
     {
         WithTemporaryDirectory(path =>
@@ -390,6 +500,7 @@ public class YourPalsSessionTests
         var owner = SaveIdentity.From(save);
         var store = new YourPalsDocumentStore(
             Path.Combine(Path.GetTempPath(), "your-pals-orphan-test-" + Guid.NewGuid().ToString("N"), YourPalsContract.DocumentFileName));
+        store.Save(store.CreateNew(owner), YourPalsDocument.Empty(owner));
         using var session = new SavePalsSession(save, null, Cached(owner), store);
 
         session.MarkOrphaned();
@@ -400,6 +511,23 @@ public class YourPalsSessionTests
 
         Assert.AreSame(refreshedSave, session.Save);
         Assert.AreEqual(SavePalsSessionState.Healthy, session.State);
+    }
+
+    [TestMethod]
+    public void RefreshCurrentDoesNotReactivateAnOrphanedSession()
+    {
+        var save = FakeSaveGame.Create("save-1");
+        var owner = SaveIdentity.From(save);
+        var store = new YourPalsDocumentStore(
+            Path.Combine(Path.GetTempPath(), "your-pals-orphan-current-refresh-test-" + Guid.NewGuid().ToString("N"), YourPalsContract.DocumentFileName));
+        using var session = new SavePalsSession(save, null, Cached(owner), store);
+
+        session.MarkOrphaned();
+        session.RefreshCurrent();
+
+        Assert.AreEqual(SavePalsSessionState.Orphaned, session.State);
+        Assert.IsTrue(session.IsReadOnly);
+        Assert.IsFalse(session.CanEdit);
     }
 
     [TestMethod]

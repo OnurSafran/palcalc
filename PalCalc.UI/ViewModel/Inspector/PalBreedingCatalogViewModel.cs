@@ -154,7 +154,8 @@ namespace PalCalc.UI.ViewModel.Inspector
 
             AllEntries = this.calculationSession.Summaries
                 .Select(r => new PalCatalogEntryViewModel(r))
-                .OrderBy(e => e.PalId)
+                .OrderBy(e => e.PalId.PalDexNo)
+                .ThenBy(e => e.PalId.IsVariant)
                 .ToList();
 
             RebuildPinnedPairs();
@@ -418,7 +419,9 @@ namespace PalCalc.UI.ViewModel.Inspector
             filtered = SelectedSort switch
             {
                 PalCatalogSortOption.Name => filtered.OrderBy(e => e.Pal.Name.Value),
-                _ => filtered.OrderBy(e => e.PalId)
+                _ => filtered
+                    .OrderBy(e => e.PalId.PalDexNo)
+                    .ThenBy(e => e.PalId.IsVariant)
             };
 
             VisibleEntries = filtered.ToList();

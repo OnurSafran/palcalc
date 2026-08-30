@@ -67,7 +67,7 @@ namespace PalCalc.UI.Tests
                 Assert.HasCount(1, viewModel.Entries);
                 Assert.HasCount(1, viewModel.SourceEntries);
                 Assert.AreEqual(YourPalsEntryStatus.Resolved, viewModel.Entries[0].Status);
-                Assert.AreEqual("Save:6:user-16:save-1", viewModel.Entries[0].SourceScope);
+                Assert.AreEqual(SourceIdentity.ForSave(owner).StableKey, viewModel.Entries[0].SourceScope);
 
                 viewModel.SelectedEntry = viewModel.Entries[0];
                 session.Refresh(Cached(owner, sourcePal));

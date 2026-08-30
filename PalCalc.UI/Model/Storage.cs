@@ -14,6 +14,23 @@ using System.Threading.Tasks;
 
 namespace PalCalc.UI.Model
 {
+    internal sealed class SaveCustomizationsLoadResult
+    {
+        public SaveCustomizationsLoadResult(
+            SaveCustomizations data,
+            bool canPersist,
+            string error = null)
+        {
+            Data = data ?? new SaveCustomizations();
+            CanPersist = canPersist;
+            Error = error;
+        }
+
+        public SaveCustomizations Data { get; }
+        public bool CanPersist { get; }
+        public string Error { get; }
+    }
+
     internal static class Storage
     {
         private static ILogger logger = Log.ForContext(typeof(Storage));
@@ -129,7 +146,21 @@ namespace PalCalc.UI.Model
             Init();
             var dto = AppSettingsJsonSerializer.ToDto(settings);
             var json = AppSettingsJsonSerializer.ToJson(dto);
-            File.WriteAllText(AppSettingsPath, json);
+            StorageFile.WriteAtomic(AppSettingsPath, json, backup: true);
+        }
+
+        public static bool TrySaveAppSettings(AppSettings settings)
+        {
+            try
+            {
+                SaveAppSettings(settings);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "error writing app settings");
+                return false;
+            }
         }
 
         public static void ClearForSave(ISaveGame save)
@@ -161,6 +192,12 @@ namespace PalCalc.UI.Model
 
                     foreach (var directory in Directory.EnumerateDirectories(dataPath))
                         Directory.Delete(directory, true);
+
+                    // SaveFileDataPath creates the folder on access, so a removed
+                    // save would otherwise always leave an empty directory behind.
+                    // Retained Your Pals documents keep the folder non-empty.
+                    if (!Directory.EnumerateFileSystemEntries(dataPath).Any())
+                        Directory.Delete(dataPath);
                 }
             }
             catch (Exception ex)
@@ -169,13 +206,16 @@ namespace PalCalc.UI.Model
             }
         }
 
-        public static SaveCustomizations LoadSaveCustomizations(ISaveGame forSaveGame, PalDB db)
+        public static SaveCustomizationsLoadResult LoadSaveCustomizations(ISaveGame forSaveGame, PalDB db)
         {
-            if (DEBUG_DisableStorage) return new SaveCustomizations();
+            if (DEBUG_DisableStorage)
+                return new SaveCustomizationsLoadResult(new SaveCustomizations(), canPersist: true);
 
             var filePath = CustomContainerPath(forSaveGame);
-            if (!File.Exists(filePath)) return new SaveCustomizations();
+            if (!File.Exists(filePath))
+                return new SaveCustomizationsLoadResult(new SaveCustomizations(), canPersist: true);
 
+            Exception loadError = null;
             SaveCustomizations res = PCDebug.HandleErrors(
                 action: () => CustomizationsJsonSerializer.ToRuntime(
                     CustomizationsJsonSerializer.FromCurrentJson(File.ReadAllText(filePath)),
@@ -183,14 +223,23 @@ namespace PalCalc.UI.Model
                 ),
                 handleErr: (re) =>
                 {
-                    logger.Warning(re, "failed to load save customizations for {label}, clearing", CachedSaveGame.IdentifierFor(forSaveGame));
+                    loadError = re;
+                    logger.Warning(re, "failed to load save customizations for {label}; keeping the file and disabling autosave", CachedSaveGame.IdentifierFor(forSaveGame));
                     return null;
                 }
             );
 
+            if (loadError != null)
+            {
+                return new SaveCustomizationsLoadResult(
+                    new SaveCustomizations(),
+                    canPersist: false,
+                    loadError.Message);
+            }
+
             res ??= new SaveCustomizations();
             res.CustomContainers ??= [];
-            return res;
+            return new SaveCustomizationsLoadResult(res, canPersist: true);
         }
 
         public static void SaveCustomizations(ISaveGame forSaveGame, SaveCustomizations custom, PalDB db)
@@ -198,7 +247,7 @@ namespace PalCalc.UI.Model
             if (DEBUG_DisableStorage) return;
 
             var json = CustomizationsJsonSerializer.ToJson(CustomizationsJsonSerializer.ToDto(custom));
-            File.WriteAllText(CustomContainerPath(forSaveGame), json);
+            StorageFile.WriteAtomic(CustomContainerPath(forSaveGame), json, backup: true);
         }
 
         #region Cached Game Save Files

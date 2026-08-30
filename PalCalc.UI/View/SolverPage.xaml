@@ -290,7 +290,7 @@
                     </Grid>
                 </TabItem>
 
-                <TabItem Header="Your Pals">
+                <TabItem Header="{itl:LocalizedText LC_YOUR_PALS_TITLE}">
                     <uiv:YourPalsView DataContext="{Binding YourPals}" />
                 </TabItem>
 

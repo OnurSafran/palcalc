@@ -100,7 +100,7 @@ namespace PalCalc.UI.Persistence
             Directory.CreateDirectory(targetsPath);
 
             var indexJson = TargetJsonSerializer.ToJson(TargetJsonSerializer.ToDto(list, db, gameSettings));
-            File.WriteAllText(Path.Combine(dataPath, IndexFileName), indexJson);
+            StorageFile.WriteAtomic(Path.Combine(dataPath, IndexFileName), indexJson, backup: true);
 
             foreach (var target in list.Targets.Where(target => !target.IsReadOnly && target.IsValid))
                 SaveTarget(target, save, db, gameSettings);
@@ -114,7 +114,7 @@ namespace PalCalc.UI.Persistence
             var targetsPath = Storage.SaveFileTargetsDataPath(save.Value);
             Directory.CreateDirectory(targetsPath);
             var targetJson = TargetJsonSerializer.ToJson(TargetJsonSerializer.ToDto(target, db, gameSettings));
-            File.WriteAllText(Path.Combine(targetsPath, TargetFileName(target.Id)), targetJson);
+            StorageFile.WriteAtomic(Path.Combine(targetsPath, TargetFileName(target.Id)), targetJson, backup: true);
         }
 
         public static void DeleteTarget(PalSpecifierViewModel target, SaveGameViewModel save)
@@ -125,6 +125,12 @@ namespace PalCalc.UI.Persistence
             var path = Path.Combine(Storage.SaveFileTargetsDataPath(save.Value), TargetFileName(target.Id));
             if (File.Exists(path))
                 File.Delete(path);
+
+            // Targets are written atomically with a backup alongside them. Without
+            // this the backup of a deleted target is left on disk permanently.
+            var backupPath = path + ".bak";
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
         }
 
         private static PalSpecifierViewModel LoadTarget(string targetsPath, string fileId, TargetRehydrationContext context)

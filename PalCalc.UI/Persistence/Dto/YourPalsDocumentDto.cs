@@ -84,6 +84,9 @@ namespace PalCalc.UI.Persistence.Dto
         [JsonProperty("sourceKey")]
         public string SourceKey { get; init; }
 
+        [JsonProperty("sourceContentFingerprint")]
+        public string SourceContentFingerprint { get; init; }
+
         [JsonProperty("instanceId")]
         public string InstanceId { get; init; }
 

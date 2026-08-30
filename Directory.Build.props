@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <!-- Windows-targeted projects (WPF) otherwise refuse to compile on non-Windows
+         hosts. This only affects the build; the app itself still requires Windows. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+</Project>

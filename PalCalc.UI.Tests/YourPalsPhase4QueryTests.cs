@@ -3,6 +3,8 @@ using PalCalc.UI.Localization;
 using PalCalc.UI.Model;
 using PalCalc.UI.Persistence;
 using PalCalc.UI.ViewModel;
+using PalCalc.UI.ViewModel.Mapped;
+using PalCalc.UI.ViewModel.PalDerived;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -37,6 +39,242 @@ public class YourPalsPhase4QueryTests
             Assert.HasCount(1, viewModel.Entries);
             Assert.AreEqual("entry-a", viewModel.Entries[0].PalEntryKey);
             Assert.IsTrue(viewModel.HasActiveQuery);
+        });
+    }
+
+    [TestMethod]
+    public void SearchIncludesFriendlyGameplayFields()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            var gender = viewModel.Entries.First(entry => entry.Status == YourPalsEntryStatus.Resolved).Gender;
+            viewModel.SearchText = gender;
+            Assert.HasCount(2, viewModel.Entries);
+            Assert.IsTrue(viewModel.Entries.All(entry => entry.Gender == gender));
+
+            viewModel.SearchText = "Hunter";
+            Assert.HasCount(1, viewModel.Entries);
+            Assert.AreEqual("entry-a", viewModel.Entries[0].PalEntryKey);
+
+            var location = viewModel.Entries.First().Location;
+            viewModel.SearchText = location;
+            Assert.HasCount(2, viewModel.Entries);
+            Assert.IsTrue(viewModel.Entries.All(entry => entry.Location == location));
+        });
+    }
+
+    [TestMethod]
+    public void Phase1UsesFriendlyStatusesAndAttentionCounts()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            var stale = viewModel.Entries.Single(entry => entry.PalEntryKey == "entry-stale");
+
+            Assert.AreNotEqual(stale.Status.ToString(), stale.StatusLabel);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(stale.StatusExplanation));
+            Assert.AreEqual(1, viewModel.Groups.Single(group => group.GroupId == "stale").AttentionCount);
+            Assert.AreEqual(0, viewModel.Groups.Single(group => group.GroupId == "favorites").AttentionCount);
+            StringAssert.Contains(viewModel.CollectionSummaryText, "4");
+        });
+    }
+
+    [TestMethod]
+    public void Phase1DistinguishesEmptyGroupsFromFilteredNoMatches()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            Assert.IsTrue(session.TryCreateGroup("Empty", out var emptyGroupId, out var error), error);
+            var emptyGroup = viewModel.Groups.Single(group => group.GroupId == emptyGroupId);
+            viewModel.SelectedGroupSummary = emptyGroup;
+
+            Assert.AreEqual(0, viewModel.CurrentCollectionEntryCount);
+            Assert.IsTrue(viewModel.HasEmptyCollection);
+            Assert.IsFalse(viewModel.HasNoQueryMatches);
+
+            viewModel.SelectedGroupSummary = viewModel.Groups.Single(group => group.GroupId == "favorites");
+            viewModel.SearchText = "does-not-exist";
+
+            Assert.AreEqual(2, viewModel.CurrentCollectionEntryCount);
+            Assert.IsFalse(viewModel.HasEmptyCollection);
+            Assert.IsTrue(viewModel.HasNoQueryMatches);
+        });
+    }
+
+    [TestMethod]
+    public void Phase2AddPickerUsesAnExplicitDestinationGroup()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            Assert.IsTrue(session.TryCreateGroup("New team", out var groupId, out var error), error);
+            viewModel.SelectedGroupSummary = viewModel.Groups.Single(group => group.GroupId == groupId);
+
+            viewModel.AddPalCommand.Execute(null);
+
+            Assert.IsTrue(viewModel.IsAddPalPickerOpen);
+            Assert.AreEqual(groupId, viewModel.SelectedAddGroup.GroupId);
+            Assert.IsTrue(viewModel.AddPalOptions.Count > 0);
+
+            var option = viewModel.AddPalOptions.First();
+            viewModel.SelectedAddPal = option;
+            Assert.IsTrue(viewModel.AddSelectedPalCommand.CanExecute(null));
+            viewModel.AddSelectedPalCommand.Execute(null);
+
+            Assert.IsFalse(viewModel.IsAddPalPickerOpen);
+            Assert.HasCount(1, session.Document.Groups.Single(group => group.GroupId == groupId).Members);
+            Assert.AreEqual(groupId, viewModel.SelectedEntry.GroupId);
+        });
+    }
+
+    [TestMethod]
+    public void Phase2ManualEditorUsesCatalogPalAndSupportedFields()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            Assert.IsTrue(session.TryCreateGroup("Manual team", out var groupId, out var error), error);
+            viewModel.SelectedGroupSummary = viewModel.Groups.Single(group => group.GroupId == groupId);
+
+            viewModel.AddPalCommand.Execute(null);
+            viewModel.OpenManualEditorCommand.Execute(null);
+            viewModel.SelectedManualPal = PalViewModel.All.First();
+            viewModel.SelectedManualGender = CustomPalInstanceGender.Female;
+            viewModel.ManualLevelText = "42";
+            viewModel.ManualNickname = "Planner Pal";
+            viewModel.SaveManualEditorCommand.Execute(null);
+
+            var definition = session.Document.ManualDefinitions.Single();
+            Assert.AreEqual(PalViewModel.All.First().ModelObject.InternalName, definition.RawInternalName);
+            Assert.AreEqual("42", definition.RawValues["level"].ToString());
+            Assert.AreEqual("FEMALE", definition.RawValues["gender"].ToString());
+            Assert.AreEqual("Planner Pal", definition.RawValues["nickname"].ToString());
+            Assert.IsFalse(viewModel.IsAddPalPickerOpen);
+            Assert.AreEqual(YourPalsEntryStatus.Resolved, viewModel.SelectedEntry.Status);
+        });
+    }
+
+    [TestMethod]
+    public void Phase2SelectingEntryOpensDismissibleDetailsState()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            var entry = viewModel.Entries.First();
+            viewModel.SelectedEntry = entry;
+
+            Assert.IsTrue(viewModel.IsDetailsOpen);
+            Assert.AreSame(entry, viewModel.SelectedEntry);
+
+            viewModel.CloseDetailsCommand.Execute(null);
+
+            Assert.IsFalse(viewModel.IsDetailsOpen);
+            Assert.IsNull(viewModel.SelectedEntry);
+        });
+    }
+
+    [TestMethod]
+    public void Phase3AttentionReviewIsAFilteredProjectionOfSavedRows()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            viewModel.ReviewAttentionCommand.Execute(null);
+
+            Assert.IsTrue(viewModel.IsAttentionReviewActive);
+            Assert.AreEqual("Needs attention", viewModel.SelectedCollectionTitle);
+            Assert.HasCount(2, viewModel.Entries);
+            Assert.IsTrue(viewModel.Entries.All(entry => entry.Status != YourPalsEntryStatus.Resolved));
+
+            var stale = viewModel.Entries.Single(entry => entry.Status == YourPalsEntryStatus.Stale);
+            Assert.AreEqual("Find replacement", stale.AttentionActionText);
+            Assert.IsTrue(viewModel.RepairEntryCommand.CanExecute(stale));
+            Assert.IsFalse(viewModel.IsAllPalsSelected);
+        });
+    }
+
+    [TestMethod]
+    public void Phase3StaleActionRebindsTheExistingEntryWithoutDeletingIt()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            var stale = viewModel.Entries.Single(entry => entry.Status == YourPalsEntryStatus.Stale);
+            viewModel.RepairEntryCommand.Execute(stale);
+
+            Assert.IsTrue(viewModel.IsRepairMode);
+            Assert.IsTrue(viewModel.IsAddPalPickerOpen);
+            Assert.AreEqual(stale.PalEntryKey, viewModel.SelectedEntry.PalEntryKey);
+            Assert.IsTrue(viewModel.AddPalOptions.Count > 0);
+
+            viewModel.SelectedAddPal = viewModel.AddPalOptions.First();
+            viewModel.AddSelectedPalCommand.Execute(null);
+
+            Assert.IsFalse(viewModel.IsAddPalPickerOpen);
+            Assert.AreEqual(YourPalsEntryStatus.Resolved, session.ResolvedMembers.Single(member =>
+                member.Member.PalEntryKey == stale.PalEntryKey).Status);
+            Assert.AreEqual(4, session.Document.Groups.SelectMany(group => group.Members).Count());
+        });
+    }
+
+    [TestMethod]
+    public void RepairPickerDoesNotRequireASelectedDestinationGroup()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            var stale = viewModel.Entries.Single(entry => entry.Status == YourPalsEntryStatus.Stale);
+            viewModel.RepairEntryCommand.Execute(stale);
+            viewModel.SelectedAddGroup = null;
+            viewModel.SelectedAddPal = viewModel.AddPalOptions.First();
+
+            Assert.IsTrue(viewModel.AddSelectedPalCommand.CanExecute(null));
+            viewModel.AddSelectedPalCommand.Execute(null);
+
+            Assert.AreEqual(
+                YourPalsEntryStatus.Resolved,
+                session.ResolvedMembers.Single(member => member.Member.PalEntryKey == stale.PalEntryKey).Status);
+            Assert.AreEqual("stale", viewModel.SelectedEntry.GroupId);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(session.Document.Groups
+                .Single(group => group.GroupId == "stale")
+                .Members.Single(member => member.PalEntryKey == stale.PalEntryKey)
+                .SourceKey));
+        });
+    }
+
+    [TestMethod]
+    public void Phase3SolverCardReportsReadyAndExcludedEntries()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            Assert.AreEqual(2, viewModel.SolverReadyCount);
+            Assert.AreEqual(2, viewModel.SolverExcludedCount);
+            StringAssert.Contains(viewModel.SolverSourceSummaryText, "2");
+            StringAssert.Contains(viewModel.SolverSourceExcludedText, "2");
+
+            Assert.IsFalse(string.IsNullOrWhiteSpace(viewModel.SolverSourceStateText));
+        });
+    }
+
+    [TestMethod]
+    public void Phase4OperationalStateLabelsAreLocalized()
+    {
+        WithQueryFixture((session, viewModel) =>
+        {
+            Assert.AreEqual("Ready", viewModel.SessionState);
+            Assert.AreEqual("Available", viewModel.SourceState);
+
+            var originalLocale = Translator.CurrentLocale;
+            try
+            {
+                foreach (var locale in Enum.GetValues<TranslationLocale>())
+                {
+                    Translator.CurrentLocale = locale;
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(
+                        LocalizationCodes.LC_YOUR_PALS_SORT.Bind().Value));
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(
+                        LocalizationCodes.LC_YOUR_PALS_RECOVERY_READ_ONLY.Bind().Value));
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(
+                        LocalizationCodes.LC_YOUR_PALS_DELETE_ORPHAN_CONFIRM.Bind(new { path = "document" }).Value));
+                }
+            }
+            finally
+            {
+                Translator.CurrentLocale = originalLocale;
+            }
         });
     }
 
@@ -222,6 +460,7 @@ public class YourPalsPhase4QueryTests
             Path.Combine(rootPath, gameId, YourPalsContract.DocumentFileName));
         pal ??= PalDB.LoadEmbedded().Pals.First();
         var resolvedA = SourcePal(pal, "instance-a");
+        resolvedA.NickName = "Hunter";
         var resolvedB = SourcePal(pal, "instance-b");
         var sourceIdentity = SourceIdentity.ForSave(owner);
         var document = new YourPalsDocument

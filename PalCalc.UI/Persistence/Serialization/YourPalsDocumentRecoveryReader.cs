@@ -44,8 +44,8 @@ namespace PalCalc.UI.Persistence.Serialization
 
         private static readonly HashSet<string> MemberProperties = new(StringComparer.Ordinal)
         {
-            "palEntryKey", "kind", "sourceIdentity", "sourceKey", "instanceId",
-            "lastKnownInternalName", "lastKnownDisplayName", "manualDefinitionId",
+            "palEntryKey", "kind", "sourceIdentity", "sourceKey", "sourceContentFingerprint",
+            "instanceId", "lastKnownInternalName", "lastKnownDisplayName", "manualDefinitionId",
         };
 
         private static readonly HashSet<string> ManualDefinitionProperties = new(StringComparer.Ordinal)
@@ -315,6 +315,7 @@ namespace PalCalc.UI.Persistence.Serialization
                 Kind = kind,
                 SourceIdentity = sourceIdentity,
                 SourceKey = ReadOptionalString(memberObject?["sourceKey"], "sourceKey", groupId, palEntryKey, diagnostics, extensionData, ref partial),
+                SourceContentFingerprint = ReadOptionalString(memberObject?["sourceContentFingerprint"], "sourceContentFingerprint", groupId, palEntryKey, diagnostics, extensionData, ref partial),
                 InstanceId = ReadOptionalString(memberObject?["instanceId"], "instanceId", groupId, palEntryKey, diagnostics, extensionData, ref partial),
                 LastKnownInternalName = ReadOptionalString(memberObject?["lastKnownInternalName"], "lastKnownInternalName", groupId, palEntryKey, diagnostics, extensionData, ref partial),
                 LastKnownDisplayName = ReadOptionalString(memberObject?["lastKnownDisplayName"], "lastKnownDisplayName", groupId, palEntryKey, diagnostics, extensionData, ref partial),

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using PalCalc.Model;
-using PalCalc.SaveReader;
 using PalCalc.UI.Localization;
 using PalCalc.UI.Model;
 using PalCalc.UI.ViewModel.Inspector;
@@ -19,7 +18,7 @@ public class PalCatalogServerScopeTests
 
         var pal = palDb.Pals.First(p => p.Name == "Cattiva");
 
-        var testSave = new CachedSaveGame(new StandardSaveGame("test_save_1"))
+        var testSave = new CachedSaveGame(FakeSaveGame.Create("test_save_1"))
         {
             IsServerSave = true,
             PlayerName = "NonExistentPlayer",
@@ -48,7 +47,7 @@ public class PalCatalogServerScopeTests
 
         var pal = palDb.Pals.First(p => p.Name == "Cattiva");
 
-        var testSave = new CachedSaveGame(new StandardSaveGame("test_save_2"))
+        var testSave = new CachedSaveGame(FakeSaveGame.Create("test_save_2"))
         {
             IsServerSave = true,
             PlayerName = "TestPlayer",
@@ -81,7 +80,7 @@ public class PalCatalogServerScopeTests
         var cattiva = palDb.Pals.First(p => p.Name == "Cattiva");
         var chikipi = palDb.Pals.First(p => p.Name == "Chikipi");
         var recipe = breedingDb.Breeding.First(b => b.Parents.Any(p => p.Pal == cattiva) && b.Parents.Any(p => p.Pal == chikipi));
-        var save = new StandardSaveGame("test_singleplayer_scope");
+        var save = FakeSaveGame.Create("test_singleplayer_scope");
         var cachedSave = new CachedSaveGame(save)
         {
             IsServerSave = false,
@@ -111,7 +110,7 @@ public class PalCatalogServerScopeTests
         var breedingDb = PalBreedingDB.LoadEmbedded(palDb);
         var pal = palDb.Pals.First(p => p.Name == "Cattiva");
 
-        var testSave = new CachedSaveGame(new StandardSaveGame("test_save_server_default_player"))
+        var testSave = new CachedSaveGame(FakeSaveGame.Create("test_save_server_default_player"))
         {
             IsServerSave = true,
             PlayerName = "UNKNOWN",
@@ -142,7 +141,7 @@ public class PalCatalogServerScopeTests
         var palDb = PalDB.LoadEmbedded();
         var breedingDb = PalBreedingDB.LoadEmbedded(palDb);
         var pal = palDb.Pals.First(p => p.Name == "Cattiva");
-        var save = new StandardSaveGame("test_pinned_malformed_record");
+        var save = FakeSaveGame.Create("test_pinned_malformed_record");
         var cachedSave = new CachedSaveGame(save)
         {
             OwnedPals = new List<PalInstance>
@@ -168,7 +167,7 @@ public class PalCatalogServerScopeTests
         var breedingDb = PalBreedingDB.LoadEmbedded(palDb);
         var pal = palDb.Pals.First(p => p.Name == "Cattiva");
 
-        var testSave = new CachedSaveGame(new StandardSaveGame("test_save_global_player"))
+        var testSave = new CachedSaveGame(FakeSaveGame.Create("test_save_global_player"))
         {
             IsServerSave = true,
             PlayerName = "TestPlayer",
@@ -215,7 +214,7 @@ public class PalCatalogServerScopeTests
         var breedingDb = PalBreedingDB.LoadEmbedded(palDb);
         var pal = palDb.Pals.First(p => p.Name == "Cattiva");
 
-        var testSave = new CachedSaveGame(new StandardSaveGame("test_save_global_guild"))
+        var testSave = new CachedSaveGame(FakeSaveGame.Create("test_save_global_guild"))
         {
             IsServerSave = true,
             PlayerName = "TestPlayer",
@@ -253,7 +252,7 @@ public class PalCatalogServerScopeTests
     [TestMethod]
     public void CachedSaveCopyFrom_InvalidatesContainerGuildScope()
     {
-        var save = new StandardSaveGame("test_scope_cache_reload");
+        var save = FakeSaveGame.Create("test_scope_cache_reload");
         var original = new CachedSaveGame(save)
         {
             Players = new List<PlayerInstance>
@@ -306,7 +305,7 @@ public class PalCatalogServerScopeTests
         var breedingDb = PalBreedingDB.LoadEmbedded(palDb);
         var cattiva = palDb.Pals.First(p => p.Name == "Cattiva");
         var chikipi = palDb.Pals.First(p => p.Name == "Chikipi");
-        var save = new StandardSaveGame("test_pinned_pair_index");
+        var save = FakeSaveGame.Create("test_pinned_pair_index");
         var cachedSave = new CachedSaveGame(save)
         {
             OwnedPals = new List<PalInstance>

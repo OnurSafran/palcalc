@@ -36,6 +36,8 @@ namespace PalCalc.UI.ViewModel.Inspector
 
         private GameSettings settings;
         private CachedSaveGame cachedSave;
+        private readonly SaveGameViewModel saveGameViewModel;
+        private readonly SaveCustomizationsViewModel customizations;
 
         [ObservableProperty]
         private OwnerTreeViewModel ownerTree;
@@ -43,6 +45,10 @@ namespace PalCalc.UI.ViewModel.Inspector
         public int TotalMatches => OwnerTree.AllContainerSources.SelectMany(c => c.Container.Grids).SelectMany(g => g.Slots).Count(slot => slot.Matches);
 
         public SearchSettingsViewModel SearchSettings { get; }
+
+        public bool CanEditCustomizations => customizations?.CanPersist == true;
+
+        public bool HasCustomizationsLoadError => !string.IsNullOrWhiteSpace(customizations?.LoadError);
 
         private ICommand newCustomContainerCommand;
         public IRelayCommand<ISearchableContainerViewModel> DeleteContainerCommand { get; }
@@ -56,6 +62,8 @@ namespace PalCalc.UI.ViewModel.Inspector
 
         public SearchViewModel(SaveGameViewModel sgvm, CachedSaveGame cachedSave, GameSettings settings)
         {
+            saveGameViewModel = sgvm;
+            customizations = sgvm.Customizations;
             this.settings = settings;
             this.cachedSave = cachedSave;
 
@@ -65,28 +73,28 @@ namespace PalCalc.UI.ViewModel.Inspector
                 {
                     Title = LocalizationCodes.LC_CUSTOM_CONTAINER_NEW_TITLE.Bind().Value,
                     InputLabel = LocalizationCodes.LC_CUSTOM_CONTAINER_NEW_FIELD.Bind().Value,
-                    Validator = label => IsValidCustomLabel(sgvm, label),
+                    Validator = label => IsValidCustomLabel(saveGameViewModel, label),
                     Owner = App.ActiveWindow,
                 };
 
                 if (nameModal.ShowDialog() == true)
                 {
                     var container = new CustomContainer() { Label = nameModal.Result };
-                    sgvm.Customizations.CustomContainers.Add(new CustomContainerViewModel(container));
+                    customizations.CustomContainers.Add(new CustomContainerViewModel(container));
                 }
-            });
+            }, () => CanEditCustomizations);
 
             RenameContainerCommand = new RelayCommand<ISearchableContainerViewModel>(
                 container =>
                 {
                     var customContainer = container as CustomSearchableContainerViewModel;
-                    if (customContainer == null) return;
+                    if (customContainer == null || !CanEditCustomizations) return;
 
                     var nameModal = new SimpleTextInputWindow(customContainer.Label)
                     {
                         Title = LocalizationCodes.LC_CUSTOM_CONTAINER_RENAME_TITLE.Bind().Value,
                         InputLabel = LocalizationCodes.LC_CUSTOM_CONTAINER_RENAME_FIELD.Bind().Value,
-                        Validator = label => IsValidCustomLabel(sgvm, label),
+                        Validator = label => IsValidCustomLabel(saveGameViewModel, label),
                         Owner = App.ActiveWindow,
                     };
 
@@ -94,20 +102,22 @@ namespace PalCalc.UI.ViewModel.Inspector
                     {
                         customContainer.Value.Label = nameModal.Result;
                     }
-                }
+                },
+                container => CanEditCustomizations && container is CustomSearchableContainerViewModel
             );
 
             DeleteContainerCommand = new RelayCommand<ISearchableContainerViewModel>(
                 container =>
                 {
                     var customContainer = container as CustomSearchableContainerViewModel;
-                    if (customContainer == null) return;
+                    if (customContainer == null || !CanEditCustomizations) return;
 
                     if (MessageBox.Show(LocalizationCodes.LC_REMOVE_CUSTOM_CONTAINER_DESCRIPTION.Bind(customContainer.Label).Value, "", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
                         return;
 
-                    sgvm.Customizations.CustomContainers.Remove(customContainer.Value);
-                }
+                    customizations.CustomContainers.Remove(customContainer.Value);
+                },
+                container => CanEditCustomizations && container is CustomSearchableContainerViewModel
             );
 
             DeleteSlotCommand = new RelayCommand<IContainerGridSlotViewModel>(
@@ -122,21 +132,22 @@ namespace PalCalc.UI.ViewModel.Inspector
 
                     foreach (var cmd in subCommands)
                         cmd.Execute(slot);
-                }
+                },
+                slot => CanEditCustomizations && slot != null
             );
 
             CollectionChangedEventManager.AddHandler(
-                sgvm.Customizations.CustomContainers,
-                (_, _) => BuildContainerTree(sgvm)
+                customizations.CustomContainers,
+                (_, _) => BuildContainerTree()
             );
 
-            BuildContainerTree(sgvm);
+            BuildContainerTree();
             SearchSettings = new SearchSettingsViewModel();
 
             SearchSettings.PropertyChanged += SearchSettings_PropertyChanged;
         }
 
-        private void BuildContainerTree(SaveGameViewModel sgvm)
+        private void BuildContainerTree()
         {
             var csg = cachedSave;
             var palsByContainerId = csg.OwnedPals.GroupBy(p => p.Location.ContainerId).ToDictionary(g => g.Key, g => g.ToList());
@@ -146,7 +157,7 @@ namespace PalCalc.UI.ViewModel.Inspector
                 .Select(c => new DefaultSearchableContainerViewModel(settings, c, palsByContainerId[c.Id]))
                 .Cast<ISearchableContainerViewModel>()
                 .Concat(
-                    sgvm.Customizations.CustomContainers.Select(c =>
+                    customizations.CustomContainers.Select(c =>
                         new CustomSearchableContainerViewModel(settings, c)
                         {
                             RenameCommand = RenameContainerCommand,

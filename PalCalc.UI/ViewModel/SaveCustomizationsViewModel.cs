@@ -116,10 +116,14 @@ namespace PalCalc.UI.ViewModel
         }
 
         private Debouncer saveAction;
+        private readonly bool canPersist;
 
         private SaveCustomizationsViewModel(ISaveGame save, Dispatcher dispatcher)
         {
-            var data = Storage.LoadSaveCustomizations(save, PalDB.LoadEmbedded());
+            var loadResult = Storage.LoadSaveCustomizations(save, PalDB.LoadEmbedded());
+            canPersist = loadResult.CanPersist;
+            LoadError = loadResult.Error;
+            var data = loadResult.Data;
 
             CustomContainers = new ObservableCollection<CustomContainerViewModel>(data.CustomContainers.Select(c => new CustomContainerViewModel(c)));
 
@@ -130,6 +134,9 @@ namespace PalCalc.UI.ViewModel
 
             saveAction = new Debouncer(TimeSpan.FromSeconds(3), () =>
             {
+                if (!canPersist)
+                    return;
+
                 Storage.SaveCustomizations(save, ModelObject, PalDB.LoadEmbedded());
             }, dispatcher);
         }
@@ -139,12 +146,20 @@ namespace PalCalc.UI.ViewModel
             saveAction.Dispose();
         }
 
-        public void Flush() => saveAction.Flush();
+        public void Flush()
+        {
+            if (canPersist)
+                saveAction.Flush();
+        }
 
         public SaveCustomizations ModelObject => new SaveCustomizations()
         {
             CustomContainers = CustomContainers.Select(c => c.ModelObject).ToList()
         };
+
+        public bool CanPersist => canPersist;
+
+        public string LoadError { get; }
 
         public ObservableCollection<CustomContainerViewModel> CustomContainers { get; }
 
@@ -168,13 +183,13 @@ namespace PalCalc.UI.ViewModel
 
         private void PalInst_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            saveAction.Run();
+            RequestSave();
             OnPropertyChanged(nameof(CustomContainers));
         }
 
         private void Container_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            saveAction.Run();
+            RequestSave();
             OnPropertyChanged(nameof(CustomContainers));
         }
 
@@ -186,7 +201,7 @@ namespace PalCalc.UI.ViewModel
             foreach (var p in RemovedItems<CustomPalInstanceViewModel>(e))
                 p.PropertyChanged -= PalInst_PropertyChanged;
 
-            saveAction.Run();
+            RequestSave();
             OnPropertyChanged(nameof(CustomContainers));
         }
 
@@ -198,8 +213,14 @@ namespace PalCalc.UI.ViewModel
             foreach (var c in RemovedItems<CustomContainerViewModel>(e))
                 StopMonitorContainer(c);
 
-            saveAction.Run();
+            RequestSave();
             OnPropertyChanged(nameof(CustomContainers));
+        }
+
+        private void RequestSave()
+        {
+            if (canPersist)
+                saveAction.Run();
         }
 
         private IEnumerable<T> AddedItems<T>(NotifyCollectionChangedEventArgs e)

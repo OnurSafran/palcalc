@@ -91,9 +91,44 @@ namespace PalCalc.UI.ViewModel
         private bool CanBeginNavigateSaveSelectionPage() =>
             Content is SolverPage || Content is YourPalsOrphanedDocumentsPage;
 
+        private bool TryResolvePendingYourPalsChanges()
+        {
+            var session = yourPalsSessions.ActiveSession;
+            if (session?.IsDirty != true)
+                return true;
+
+            var result = MessageBox.Show(
+                Localized(LocalizationCodes.LC_YOUR_PALS_UNSAVED_NAVIGATION_CONFIRM),
+                Localized(LocalizationCodes.LC_YOUR_PALS_UNSAVED_NAVIGATION_TITLE),
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Warning);
+            if (result == MessageBoxResult.Cancel)
+                return false;
+
+            if (result == MessageBoxResult.Yes)
+            {
+                if (session.TrySave())
+                    return true;
+
+                AdonisMessageBox.Show(
+                    Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_FAILED),
+                    caption: "");
+                return false;
+            }
+
+            if (session.TryDiscardChangesAndReload(out var error))
+                return true;
+
+            AdonisMessageBox.Show(error, caption: "");
+            return false;
+        }
+
         [RelayCommand(CanExecute = nameof(CanBeginNavigateSaveSelectionPage))]
         private void BeginNavigateSaveSelectionPage()
         {
+            if (!TryResolvePendingYourPalsChanges())
+                return;
+
             var loadingPage = new LoadingPage();
             Content = loadingPage;
             ShowToolbar = false;
@@ -239,6 +274,8 @@ namespace PalCalc.UI.ViewModel
             var crashsupport = CrashSupport.PrepareSupportFile(specificSave: obj);
             AdonisMessageBox.Show(LocalizationCodes.LC_ERROR_SAVE_LOAD_FAILED.Bind(crashsupport).Value, caption: "");
         }
+
+        private static string Localized(LocalizationCodes code) => code.Bind().Value;
 
         protected override void OnPropertyChanging(PropertyChangingEventArgs e)
         {

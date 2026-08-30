@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:PalCalc.UI.ViewModel"
+             xmlns:itl="clr-namespace:PalCalc.UI.Localization"
              xmlns:c="clr-namespace:PalCalc.UI.ViewModel.Converters"
              xmlns:adonisUi="clr-namespace:AdonisUI;assembly=AdonisUI"
              mc:Ignorable="d"
@@ -17,16 +18,16 @@
         <DockPanel>
             <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="Back to save selection"
+                    <Button Content="{itl:LocalizedText LC_YOUR_PALS_BACK_TO_SAVE_SELECTION}"
                             Command="{Binding BackCommand}"
                             Padding="8,3"
                             Margin="0,0,10,0" />
-                    <TextBlock Text="Orphaned Your Pals documents"
+                    <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_ORPHANED_DOCUMENTS}"
                                FontSize="18"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center" />
                 </StackPanel>
-                <TextBlock Text="These documents belong to saves that are not currently available. They are kept separate from active saves and can be deleted only with explicit confirmation."
+                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_DESCRIPTION}"
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
                            Margin="0,5,0,0" />
@@ -39,18 +40,35 @@
                           SelectedItem="{Binding SelectedOrphanedDocument, Mode=TwoWay}"
                           BorderThickness="0"
                           Background="Transparent"
-                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          HorizontalContentAlignment="Stretch"
                           Visibility="{Binding HasOrphanedDocuments, Converter={StaticResource VVC}}">
-                    <ListView.View>
-                        <GridView AllowsColumnReorder="False">
-                            <GridViewColumn Header="Owner" DisplayMemberBinding="{Binding OwnerLabel}" Width="180" />
-                            <GridViewColumn Header="Reason" DisplayMemberBinding="{Binding Reason}" Width="360" />
-                            <GridViewColumn Header="Document" DisplayMemberBinding="{Binding DocumentPath}" Width="600" />
-                        </GridView>
-                    </ListView.View>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="6" Margin="0,0,0,4" BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer2BorderBrush}}" BorderThickness="0,0,0,1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_OWNER}" FontWeight="SemiBold" Margin="0,0,8,3" />
+                                    <TextBlock Grid.Column="1" Text="{Binding OwnerLabel}" TextWrapping="Wrap" Margin="0,0,0,3" />
+                                    <TextBlock Grid.Row="1" Text="{itl:LocalizedText LC_YOUR_PALS_REASON}" FontWeight="SemiBold" Margin="0,0,8,3" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Reason}" TextWrapping="Wrap" Margin="0,0,0,3" />
+                                    <TextBlock Grid.Row="2" Text="{itl:LocalizedText LC_YOUR_PALS_DOCUMENT}" FontWeight="SemiBold" Margin="0,0,8,0" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DocumentPath}" TextWrapping="Wrap" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
                 </ListView>
 
-                <TextBlock Text="No orphaned Your Pals documents were found. Click Refresh to scan again."
+                <TextBlock Text="{itl:LocalizedText LC_YOUR_PALS_NO_ORPHANED_DOCUMENTS}"
                            TextWrapping="Wrap"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
@@ -58,11 +76,11 @@
             </Grid>
 
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
-                <Button Content="Refresh"
+                <Button Content="{itl:LocalizedText LC_YOUR_PALS_REFRESH}"
                         Command="{Binding RefreshOrphanedDocumentsCommand}"
                         Padding="8,3"
                         Margin="0,0,5,0" />
-                <Button Content="Delete selected orphan"
+                <Button Content="{itl:LocalizedText LC_YOUR_PALS_DELETE_SELECTED_ORPHAN}"
                         Command="{Binding DeleteSelectedOrphanedDocumentCommand}"
                         Padding="8,3" />
             </StackPanel>

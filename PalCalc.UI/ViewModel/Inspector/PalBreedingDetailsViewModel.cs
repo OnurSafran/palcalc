@@ -58,6 +58,7 @@ namespace PalCalc.UI.ViewModel.Inspector
                 .ToList();
 
             Recipes = new LazyRecipeViewModelList(entryResult.Recipes, settings, pinnedPairKeys, pinChanged);
+            SelectedRecipe = Recipes.Count > 0 ? Recipes[0] as PalBreedingRecipeViewModel : null;
         }
 
         public PalViewModel Pal { get; }
@@ -70,6 +71,9 @@ namespace PalCalc.UI.ViewModel.Inspector
         public List<PalBreedingOwnedInstanceViewModel> OwnedInstances { get; }
         public IList Recipes { get; }
         public bool HasRecipes => Recipes.Count > 0;
+
+        [ObservableProperty]
+        private PalBreedingRecipeViewModel selectedRecipe;
 
         internal void UpdatePinnedPairState(string pairKey, bool isPinned)
         {

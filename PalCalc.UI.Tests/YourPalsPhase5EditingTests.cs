@@ -2,10 +2,13 @@ using Newtonsoft.Json.Linq;
 using PalCalc.Model;
 using PalCalc.UI.Model;
 using PalCalc.UI.Persistence;
+using PalCalc.UI.ViewModel;
+using PalCalc.UI.ViewModel.Mapped;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Windows.Threading;
 
 namespace PalCalc.UI.Tests;
 
@@ -72,6 +75,94 @@ public class YourPalsPhase5EditingTests
             Assert.AreEqual("FEMALE", reloaded.Document.ManualDefinitions.Single().RawValues["gender"].Value<string>());
             Assert.AreEqual(YourPalsEntryStatus.Resolved, reloaded.ResolvedMembers.Single(member =>
                 member.Member.ManualDefinitionId == manualDefinitionId).Status);
+        });
+    }
+
+    [TestMethod]
+    public void EditingAMissingManualDefinitionRecreatesItsStableDefinitionId()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, YourPalsContract.DocumentFileName));
+            store.Save(store.CreateNew(owner), new YourPalsDocument
+            {
+                OwnerSaveIdentity = owner,
+                Groups =
+                [
+                    new YourPalsGroup
+                    {
+                        GroupId = "manual-group",
+                        Name = "Manual group",
+                        Members = [YourPalsMember.Manual("missing-definition", "entry-1")],
+                    },
+                ],
+            });
+
+            using var session = new SavePalsSession(save, null, Cached(owner), store);
+            using var viewModel = new YourPalsViewModel(session, System.Windows.Threading.Dispatcher.CurrentDispatcher);
+
+            viewModel.SelectedEntry = viewModel.Entries.Single();
+            Assert.IsTrue(viewModel.EditSelectedManualCommand.CanExecute(null));
+            viewModel.EditSelectedManualCommand.Execute(null);
+            viewModel.SelectedManualPal = PalViewModel.All.First();
+            viewModel.SaveManualEditorCommand.Execute(null);
+
+            Assert.AreEqual("missing-definition", session.Document.ManualDefinitions.Single().ManualDefinitionId);
+            Assert.AreEqual(YourPalsEntryStatus.Resolved, session.ResolvedMembers.Single().Status);
+        });
+    }
+
+    [TestMethod]
+    public void ManualEditorUpdatesPreserveFieldsOwnedByNewerVersions()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, YourPalsContract.DocumentFileName));
+            store.Save(store.CreateNew(owner), new YourPalsDocument
+            {
+                OwnerSaveIdentity = owner,
+                Groups =
+                [
+                    new YourPalsGroup
+                    {
+                        GroupId = "manual-group",
+                        Name = "Manual group",
+                        Members = [YourPalsMember.Manual("manual-1", "entry-1")],
+                    },
+                ],
+                ManualDefinitions =
+                [
+                    new YourPalsManualDefinition
+                    {
+                        ManualDefinitionId = "manual-1",
+                        RawInternalName = PalDB.LoadEmbedded().Pals.First().InternalName,
+                        RawValues = new Dictionary<string, JToken>
+                        {
+                            ["level"] = new JValue(12),
+                            ["rank"] = new JValue(5),
+                            ["futureField"] = new JValue("keep-me"),
+                        },
+                    },
+                ],
+            });
+
+            using var session = new SavePalsSession(save, null, Cached(owner), store);
+            Assert.IsTrue(session.TryUpdateManualDefinition(
+                "manual-1",
+                PalDB.LoadEmbedded().Pals.First().InternalName,
+                new Dictionary<string, JToken> { ["level"] = new JValue(20) },
+                out var error), error);
+
+            var values = session.Document.ManualDefinitions.Single().RawValues;
+            Assert.AreEqual(20, values["level"].Value<int>());
+            Assert.AreEqual(5, values["rank"].Value<int>());
+            Assert.AreEqual("keep-me", values["futureField"].Value<string>());
         });
     }
 
@@ -384,6 +475,46 @@ public class YourPalsPhase5EditingTests
     }
 
     [TestMethod]
+    public void SelectingANonManualMemberClearsTheManualEditorValue()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, YourPalsContract.DocumentFileName));
+            var sourcePal = SourcePal(PalDB.LoadEmbedded().Pals.First(), "instance-1");
+            using var session = new SavePalsSession(save, null, Cached(owner, sourcePal), store);
+            Assert.IsTrue(session.TryCreateDocument(out var error), error);
+            Assert.IsTrue(session.TryCreateGroup("Favorites", out var groupId, out error), error);
+            Assert.IsTrue(session.TryAddImportedMember(
+                groupId,
+                session.SourceSnapshot.Entries.Single(),
+                out _,
+                out error), error);
+            Assert.IsTrue(session.TryAddManualDefinition(
+                groupId,
+                "ManualPal",
+                new Dictionary<string, JToken>(),
+                out _,
+                out _,
+                out error), error);
+
+            using var viewModel = new YourPalsViewModel(session, Dispatcher.CurrentDispatcher);
+            var manualEntry = viewModel.Entries.Single(entry =>
+                entry.Member.KnownKind == YourPalsMemberKind.ManualDefinitionReference);
+            var importedEntry = viewModel.Entries.Single(entry =>
+                entry.Member.KnownKind == YourPalsMemberKind.ImportedReference);
+
+            viewModel.SelectedEntry = manualEntry;
+            Assert.AreEqual("ManualPal", viewModel.ManualInternalName);
+
+            viewModel.SelectedEntry = importedEntry;
+            Assert.AreEqual("", viewModel.ManualInternalName);
+        });
+    }
+
+    [TestMethod]
     public void MissingDocumentIsReadOnlyUntilExplicitlyCreated()
     {
         WithTemporaryDirectory(path =>
@@ -401,6 +532,179 @@ public class YourPalsPhase5EditingTests
             Assert.IsTrue(session.TryCreateDocument(out var error), error);
             Assert.IsTrue(session.CanEdit);
             Assert.IsTrue(session.TryCreateGroup("Created explicitly", out _, out error), error);
+        });
+    }
+
+    [TestMethod]
+    public void RemovingTheLastReferenceToAManualPalDropsItsDefinition()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, YourPalsContract.DocumentFileName));
+            using var session = new SavePalsSession(save, null, Cached(owner), store);
+
+            Assert.IsTrue(session.TryCreateDocument(out var error), error);
+            Assert.IsTrue(session.TryCreateGroup("Planning", out var groupId, out error), error);
+            Assert.IsTrue(session.TryAddManualDefinition(
+                groupId,
+                "BadCatgirl",
+                null,
+                out var manualDefinitionId,
+                out var manualKey,
+                out error), error);
+            Assert.AreEqual(manualDefinitionId, session.Document.ManualDefinitions.Single().ManualDefinitionId);
+
+            Assert.IsTrue(session.TryRemoveMember(groupId, manualKey, out error), error);
+            Assert.IsEmpty(session.Document.ManualDefinitions);
+        });
+    }
+
+    [TestMethod]
+    public void DeletingAGroupDropsTheManualDefinitionsOnlyItReferenced()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, YourPalsContract.DocumentFileName));
+            using var session = new SavePalsSession(save, null, Cached(owner), store);
+
+            Assert.IsTrue(session.TryCreateDocument(out var error), error);
+            Assert.IsTrue(session.TryCreateGroup("Planning", out var planningId, out error), error);
+            Assert.IsTrue(session.TryCreateGroup("Keep", out var keepId, out error), error);
+            Assert.IsTrue(session.TryAddManualDefinition(
+                planningId, "BadCatgirl", null, out var droppedId, out _, out error), error);
+            Assert.IsTrue(session.TryAddManualDefinition(
+                keepId, "BadCatgirl", null, out var keptId, out _, out error), error);
+            Assert.HasCount(2, session.Document.ManualDefinitions);
+
+            Assert.IsTrue(session.TryDeleteGroup(planningId, out error), error);
+
+            Assert.AreEqual(keptId, session.Document.ManualDefinitions.Single().ManualDefinitionId);
+            Assert.IsTrue(session.TrySave());
+
+            using var reloaded = new SavePalsSession(save, null, Cached(owner), store);
+            Assert.AreEqual(keptId, reloaded.Document.ManualDefinitions.Single().ManualDefinitionId);
+            Assert.IsFalse(reloaded.Document.ManualDefinitions.Any(d => d.ManualDefinitionId == droppedId));
+        });
+    }
+
+    [TestMethod]
+    public void RemovingMissingMembersDropsOnlyThePalsThatLeftTheSave()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, YourPalsContract.DocumentFileName));
+            var pals = PalDB.LoadEmbedded().Pals.Take(2).ToList();
+            var keptPal = SourcePal(pals[0], "instance-kept");
+            var removedPal = SourcePal(pals[1], "instance-removed");
+
+            using var session = new SavePalsSession(
+                save, null, Cached(owner, keptPal, removedPal), store);
+
+            Assert.IsTrue(session.TryCreateDocument(out var error), error);
+            Assert.IsTrue(session.TryCreateGroup("Breeding", out var groupId, out error), error);
+            // Each edit rebuilds the snapshot, so the entry must be re-read from the
+            // current one rather than captured up front.
+            foreach (var instanceId in new[] { "instance-kept", "instance-removed" })
+            {
+                var entry = session.SourceSnapshot.Entries.Single(
+                    candidate => candidate.InstanceId == instanceId);
+                Assert.IsTrue(session.TryAddImportedMember(groupId, entry, out _, out error), error);
+            }
+            Assert.IsTrue(session.TryAddManualDefinition(
+                groupId, "BadCatgirl", null, out _, out var manualKey, out error), error);
+            Assert.HasCount(3, session.ResolvedMembers);
+
+            // The save reloads with one of the two Pals gone.
+            session.Refresh(Cached(owner, keptPal));
+            Assert.AreEqual(
+                1,
+                session.ResolvedMembers.Count(member => member.Status == YourPalsEntryStatus.Stale));
+
+            Assert.IsTrue(session.TryRemoveMissingMembers(out var removedCount, out error), error);
+            Assert.AreEqual(1, removedCount);
+
+            var remaining = session.Document.Groups.Single().Members;
+            Assert.HasCount(2, remaining);
+            Assert.IsTrue(remaining.Any(member => member.InstanceId == "instance-kept"));
+            Assert.IsFalse(remaining.Any(member => member.InstanceId == "instance-removed"));
+            // The manual Pal is not "missing from the save" and must survive.
+            Assert.IsTrue(remaining.Any(member => member.PalEntryKey == manualKey));
+            Assert.HasCount(1, session.Document.ManualDefinitions);
+        });
+    }
+
+    [TestMethod]
+    public void RemovingMissingMembersIsRefusedWhileTheSaveSourceIsUnavailable()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, YourPalsContract.DocumentFileName));
+            var sourcePal = SourcePal(PalDB.LoadEmbedded().Pals.First(), "instance-1");
+            using var session = new SavePalsSession(save, null, Cached(owner, sourcePal), store);
+
+            Assert.IsTrue(session.TryCreateDocument(out var error), error);
+            Assert.IsTrue(session.TryCreateGroup("Breeding", out var groupId, out error), error);
+            Assert.IsTrue(session.TryAddImportedMember(
+                groupId, session.SourceSnapshot.Entries.Single(), out _, out error), error);
+
+            // With no cached save at all every imported member looks missing;
+            // bulk removal must not wipe the group in that state.
+            session.Refresh(null);
+            Assert.IsFalse(session.IsSourceAvailable);
+
+            Assert.IsFalse(session.TryRemoveMissingMembers(out var removedCount, out error));
+            Assert.AreEqual(0, removedCount);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(error));
+            Assert.HasCount(1, session.Document.Groups.Single().Members);
+        });
+    }
+
+    [TestMethod]
+    public void SavedMemberFingerprintIsWrittenExactlyOnce()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var documentPath = Path.Combine(path, YourPalsContract.DocumentFileName);
+            var store = new YourPalsDocumentStore(documentPath);
+            var sourcePal = SourcePal(PalDB.LoadEmbedded().Pals.First(), "instance-1");
+
+            using (var session = new SavePalsSession(save, null, Cached(owner, sourcePal), store))
+            {
+                Assert.IsTrue(session.TryCreateDocument(out var error), error);
+                Assert.IsTrue(session.TryCreateGroup("Breeding", out var groupId, out error), error);
+                Assert.IsTrue(session.TryAddImportedMember(
+                    groupId, session.SourceSnapshot.Entries.Single(), out _, out error), error);
+                Assert.IsTrue(session.TrySave());
+            }
+
+            // Reload and save again: the recovery reader must treat the fingerprint
+            // as a known field rather than also copying it into extension data,
+            // which would emit the property twice.
+            using (var reloaded = new SavePalsSession(save, null, Cached(owner, sourcePal), store))
+            {
+                Assert.IsTrue(reloaded.TryCreateGroup("Second", out _, out var error), error);
+                Assert.IsTrue(reloaded.TrySave());
+            }
+
+            var json = File.ReadAllText(documentPath);
+            Assert.AreEqual(
+                1,
+                System.Text.RegularExpressions.Regex.Matches(json, "\"sourceContentFingerprint\"").Count,
+                json);
         });
     }
 

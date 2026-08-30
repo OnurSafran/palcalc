@@ -148,6 +148,53 @@ public class YourPalsPhase7RepairTests
     }
 
     [TestMethod]
+    public void AddPickerMarksConflictingCopiesAlreadyPresentInTheDestinationGroup()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var save = FakeSaveGame.Create("save-1");
+            var owner = SaveIdentity.From(save);
+            var store = new YourPalsDocumentStore(
+                Path.Combine(path, YourPalsContract.DocumentFileName));
+            var pal = PalDB.LoadEmbedded().Pals.First();
+            var first = SourcePal(pal, "instance-1", "box-1", 0);
+            var second = SourcePal(pal, "instance-1", "box-2", 1);
+            store.Save(store.CreateNew(owner), new YourPalsDocument
+            {
+                OwnerSaveIdentity = owner,
+                Groups =
+                [
+                    new YourPalsGroup
+                    {
+                        GroupId = "favorites",
+                        Name = "Favorites",
+                        Members =
+                        [YourPalsMember.Imported(new ImportedPalReference
+                        {
+                            SourceIdentity = SourceIdentity.ForSave(owner),
+                            SourceKey = null,
+                            InstanceId = "instance-1",
+                        }, "entry-1")],
+                    },
+                ],
+            });
+
+            using var session = new SavePalsSession(
+                save,
+                null,
+                Cached(owner, first, second),
+                store);
+            using var viewModel = new YourPalsViewModel(session, Dispatcher.CurrentDispatcher);
+            viewModel.SelectedGroupSummary = viewModel.Groups.Single(group => group.GroupId == "favorites");
+
+            viewModel.AddPalCommand.Execute(null);
+
+            Assert.IsGreaterThan(viewModel.AddPalOptions.Count, 1);
+            Assert.IsTrue(viewModel.AddPalOptions.All(option => option.IsAlreadyInSelectedGroup));
+        });
+    }
+
+    [TestMethod]
     public void DuplicateMembersCanBeRemovedWithoutUsingRandomIdentifiers()
     {
         WithTemporaryDirectory(path =>
@@ -199,18 +246,18 @@ public class YourPalsPhase7RepairTests
             var documentPath = Path.Combine(path, YourPalsContract.DocumentFileName);
             File.WriteAllText(
                 documentPath,
-                """
+                $$"""
                 {
                   "documentType": "your-pals",
                   "documentVersion": 1,
-                  "ownerSaveIdentity": {"userId": "user-1", "gameId": "save-1"},
+                  "ownerSaveIdentity": {"userId": "{{owner.UserId}}", "gameId": "{{owner.GameId}}"},
                   "groups": [
                     {"groupId": "duplicate", "name": "One", "order": 0, "members": [{"palEntryKey": "entry", "kind": "future-kind"}, {"palEntryKey": "manual-entry", "kind": "manual-definition-reference", "manualDefinitionId": "manual"}]},
                     {"groupId": "duplicate", "name": "Two", "order": 1, "members": [{"palEntryKey": "entry", "kind": "future-kind-2"}]}
                   ],
                   "manualDefinitions": [
-                    {"manualDefinitionId": "manual", "rawInternalName": "A", "rawValues": {}},
-                    {"manualDefinitionId": "manual", "rawInternalName": "B", "rawValues": {}}
+                    {"manualDefinitionId": "manual", "rawInternalName": "A", "rawValues": { } },
+                    {"manualDefinitionId": "manual", "rawInternalName": "B", "rawValues": { } }
                   ]
                 }
                 """);
@@ -263,6 +310,58 @@ public class YourPalsPhase7RepairTests
             Assert.IsTrue(YourPalsOrphanedDocumentManager.TryDelete(path, orphan, out var error), error);
             Assert.IsFalse(File.Exists(documentPath));
             Assert.IsFalse(File.Exists(documentPath + ".bak"));
+        });
+    }
+
+    [TestMethod]
+    public void DamagedOrphanWithNoReadableOwnerCanStillBeDeleted()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var ownerDirectory = Path.Combine(path, "damaged-save");
+            Directory.CreateDirectory(ownerDirectory);
+            var documentPath = Path.Combine(ownerDirectory, YourPalsContract.DocumentFileName);
+            File.WriteAllText(documentPath, "{ this is not valid json");
+            File.WriteAllText(documentPath + ".bak", "also not valid json");
+
+            var orphan = YourPalsOrphanedDocumentManager.Find(path, []).Single();
+            Assert.IsNull(orphan.OwnerSaveIdentity);
+
+            Assert.IsTrue(YourPalsOrphanedDocumentManager.TryDelete(path, orphan, out var error), error);
+            Assert.IsFalse(File.Exists(documentPath));
+            Assert.IsFalse(File.Exists(documentPath + ".bak"));
+        });
+    }
+
+    [TestMethod]
+    public void OrphanListedWithoutAnOwnerIsNotDeletedOnceItsOwnerBecomesReadable()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var ownerDirectory = Path.Combine(path, "repaired-save");
+            Directory.CreateDirectory(ownerDirectory);
+            var documentPath = Path.Combine(ownerDirectory, YourPalsContract.DocumentFileName);
+            File.WriteAllText(documentPath, "{ this is not valid json");
+
+            var orphan = YourPalsOrphanedDocumentManager.Find(path, []).Single();
+            Assert.IsNull(orphan.OwnerSaveIdentity);
+
+            // The file is replaced with a readable one after the list was built.
+            File.WriteAllText(
+                documentPath,
+                """
+                {
+                  "documentType": "your-pals",
+                  "documentVersion": 1,
+                  "ownerSaveIdentity": {"userId": "user-1", "gameId": "repaired-save"},
+                  "groups": [],
+                  "manualDefinitions": []
+                }
+                """);
+
+            Assert.IsFalse(YourPalsOrphanedDocumentManager.TryDelete(path, orphan, out var error));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(error));
+            Assert.IsTrue(File.Exists(documentPath));
         });
     }
 
@@ -357,6 +456,35 @@ public class YourPalsPhase7RepairTests
             Assert.IsTrue(viewModel.RecoveryGuidance.Contains(
                 "Repair recovered",
                 StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    [TestMethod]
+    public void OrphanOwnerIsRecoveredFromValidBackupWhenPrimaryIsCorrupt()
+    {
+        WithTemporaryDirectory(path =>
+        {
+            var orphanOwner = new SaveIdentity("user-1", "missing-save");
+            var documentPath = Path.Combine(path, YourPalsContract.DocumentFileName);
+            File.WriteAllText(documentPath, "not-json");
+            File.WriteAllText(
+                documentPath + ".bak",
+                $$"""
+                {
+                  "documentType": "your-pals",
+                  "documentVersion": 1,
+                  "ownerSaveIdentity": {"userId": "{{orphanOwner.UserId}}", "gameId": "{{orphanOwner.GameId}}"},
+                  "groups": [],
+                  "manualDefinitions": []
+                }
+                """);
+
+            var orphan = YourPalsOrphanedDocumentManager.Find(path, []).Single();
+
+            Assert.AreEqual(orphanOwner.CanonicalKey, orphan.OwnerLabel);
+            Assert.IsTrue(YourPalsOrphanedDocumentManager.TryDelete(path, orphan, out var error), error);
+            Assert.IsFalse(File.Exists(documentPath));
+            Assert.IsFalse(File.Exists(documentPath + ".bak"));
         });
     }
 

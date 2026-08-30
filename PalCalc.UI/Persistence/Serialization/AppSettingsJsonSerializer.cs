@@ -43,6 +43,7 @@ namespace PalCalc.UI.Persistence.Serialization
                 IsDarkTheme = value.IsDarkTheme,
                 BreedingResultListColumns = ToDto(value.BreedingResultListColumns),
                 UiLayout = ToDto(value.UiLayout),
+                YourPalsSolverSourceBySave = value.YourPalsSolverSourceBySave.ToDictionary(pair => pair.Key, pair => pair.Value),
                 SkippedAppVersion = value.SkippedAppVersion,
             };
         }
@@ -76,6 +77,7 @@ namespace PalCalc.UI.Persistence.Serialization
                 IsDarkTheme = value.IsDarkTheme,
                 BreedingResultListColumns = FromDto(value.BreedingResultListColumns),
                 UiLayout = FromDto(value.UiLayout),
+                YourPalsSolverSourceBySave = value.YourPalsSolverSourceBySave?.ToDictionary(pair => pair.Key, pair => pair.Value) ?? new(),
                 SkippedAppVersion = value.SkippedAppVersion,
             };
         }
@@ -97,6 +99,7 @@ namespace PalCalc.UI.Persistence.Serialization
             value.UiLayout ??= new UiLayoutSettings();
             value.UiLayout.Windows ??= new();
             value.UiLayout.Grids ??= new();
+            value.YourPalsSolverSourceBySave ??= new();
             return value;
         }
 

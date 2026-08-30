@@ -221,6 +221,23 @@ namespace PalCalc.UI.Tests
     }
 
     [TestMethod]
+    public void YourPalsSolverSourcePreferenceRoundTripsInAppSettings()
+    {
+        var settings = new AppSettings
+        {
+            YourPalsSolverSourceBySave = new Dictionary<string, bool>
+            {
+                ["save-key"] = true,
+            },
+        };
+
+        var restored = AppSettingsJsonSerializer.FromDto(
+            AppSettingsJsonSerializer.ToDto(settings));
+
+        Assert.IsTrue(restored.YourPalsSolverSourceBySave["save-key"]);
+    }
+
+    [TestMethod]
     public void FutureStorageIsRejectedWithoutChangingFiles()
     {
         WithTemporaryDirectory(path =>

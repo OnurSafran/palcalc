@@ -42,7 +42,10 @@ public class PalCatalogViewModelTests
 
         Assert.HasCount(palDb.Pals.Count(), catalog.AllEntries);
 
-        var palDexIds = palDb.Pals.Select(p => p.Id).ToList();
+        var palDexIds = palDb.Pals
+            .OrderBy(p => p.Id)
+            .Select(p => p.Id)
+            .ToList();
         var catalogIds = catalog.AllEntries.Select(e => e.PalId).ToList();
 
         CollectionAssert.AreEqual(palDexIds, catalogIds);

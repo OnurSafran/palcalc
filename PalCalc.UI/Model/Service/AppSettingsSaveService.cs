@@ -33,6 +33,7 @@ namespace PalCalc.UI.Model.Service
             SaveInspectorWindowManager.CloseAll(manualSave);
             SaveCustomizationsViewModel.RemoveFor(manualSave);
             settings.ExtraSaveLocations.Remove(manualSave.BasePath);
+            ForgetPerSavePreferences(manualSave);
             Storage.SaveAppSettings(settings);
 
             Storage.RemoveSave(manualSave);
@@ -45,11 +46,26 @@ namespace PalCalc.UI.Model.Service
             SaveCustomizationsViewModel.RemoveFor(virtualSave);
 
             settings.FakeSaveNames.Remove(FakeSaveGame.GetLabel(virtualSave));
+            ForgetPerSavePreferences(virtualSave);
 
             Storage.RemoveSave(virtualSave);
             virtualSave.Dispose();
 
             Storage.SaveAppSettings(settings);
+        }
+
+        // Per-save UI preferences describe a save the user just removed. Drop them
+        // so settings do not keep accumulating entries for saves that are gone.
+        private void ForgetPerSavePreferences(ISaveGame save)
+        {
+            try
+            {
+                settings.YourPalsSolverSourceBySave?.Remove(SaveIdentity.From(save).CanonicalKey);
+            }
+            catch (ArgumentException)
+            {
+                // A save without a usable identity never had per-save preferences.
+            }
         }
     }
 }

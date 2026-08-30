@@ -1,14 +1,20 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PalCalc.Model;
+using PalCalc.UI;
 using PalCalc.UI.Localization;
 using PalCalc.UI.Model;
+using PalCalc.UI.ViewModel.Mapped;
+using PalCalc.UI.ViewModel.PalDerived;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
+using System.Threading.Tasks;
 
 namespace PalCalc.UI.ViewModel
 {
@@ -18,10 +24,12 @@ namespace PalCalc.UI.ViewModel
         private readonly YourPalsQueryState queryState;
         private readonly SavePalsSessionManager orphanedDocumentManager;
         private readonly Action navigateBack;
+        private readonly Action refreshSource;
         private List<YourPalsEntryRowViewModel> allEntries = [];
         private IReadOnlyList<YourPalsGroupFilterOption> groupFilterOptions = [];
         private bool subscribedToLocale;
         private bool disposed;
+        private IReadOnlyList<YourPalsAddPalOptionViewModel> addPalOptions = [];
 
         public static YourPalsViewModel DesignerInstance => new(null, Dispatcher.CurrentDispatcher);
 
@@ -29,20 +37,27 @@ namespace PalCalc.UI.ViewModel
             SavePalsSession session,
             Dispatcher dispatcher,
             SavePalsSessionManager orphanedDocumentManager = null,
-            Action navigateBack = null)
+            Action navigateBack = null,
+            Action refreshSource = null)
         {
             Session = session;
             this.dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
             queryState = session?.QueryState ?? new YourPalsQueryState();
             this.orphanedDocumentManager = orphanedDocumentManager;
             this.navigateBack = navigateBack;
+            this.refreshSource = refreshSource;
+            useAsSolverSource = Session?.Identity is SaveIdentity identity &&
+                AppSettings.Current?.YourPalsSolverSourceBySave?.TryGetValue(identity.CanonicalKey, out var savedPreference) == true &&
+                savedPreference;
             BackCommand = new RelayCommand(() => this.navigateBack?.Invoke(), () => this.navigateBack != null);
             RefreshCommand = new RelayCommand(Refresh);
             DiscardChangesAndReloadCommand = new RelayCommand(DiscardChangesAndReload, CanDiscardChangesAndReload);
             CreateDocumentCommand = new RelayCommand(CreateDocument, CanCreateNewDocument);
+            ShowAllPalsCommand = new RelayCommand(ShowAllPals);
+            ReviewAttentionCommand = new RelayCommand(ReviewAttention);
             ClearQueryCommand = new RelayCommand(ClearQuery);
             ToggleSortDirectionCommand = new RelayCommand(ToggleSortDirection);
-            SaveCommand = new RelayCommand(Save, CanSave);
+            SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CreateGroupCommand = new RelayCommand(CreateGroup, CanCreateGroup);
             RenameGroupCommand = new RelayCommand(RenameGroup, CanRenameGroup);
             DeleteGroupCommand = new RelayCommand(DeleteGroup, CanDeleteGroup);
@@ -52,14 +67,26 @@ namespace PalCalc.UI.ViewModel
             AddManualDefinitionCommand = new RelayCommand(AddManualDefinition, CanAddManualDefinition);
             UpdateManualDefinitionCommand = new RelayCommand(UpdateManualDefinition, CanUpdateManualDefinition);
             RemoveSelectedEntryCommand = new RelayCommand(RemoveSelectedEntry, CanRemoveSelectedEntry);
+            AddPalCommand = new RelayCommand(OpenAddPalPicker, CanOpenAddPalPicker);
+            CloseOverlayCommand = new RelayCommand(CloseOverlay);
+            AddSelectedPalCommand = new RelayCommand(AddSelectedPal, CanAddSelectedPal);
+            RepairSelectedEntryCommand = new RelayCommand(OpenSelectedEntryAction, CanOpenSelectedEntryAction);
+            RepairEntryCommand = new RelayCommand<YourPalsEntryRowViewModel>(OpenEntryAction, CanOpenEntryAction);
+            OpenManualEditorCommand = new RelayCommand(OpenManualEditor, CanOpenManualEditor);
+            EditSelectedManualCommand = new RelayCommand(OpenSelectedManualEditor, () => CanEditSelectedManual);
+            SaveManualEditorCommand = new RelayCommand(SaveManualEditor, CanSaveManualEditor);
+            CancelManualEditorCommand = new RelayCommand(CancelManualEditor);
+            CloseDetailsCommand = new RelayCommand(CloseDetails);
             RebindSelectedEntryCommand = new RelayCommand(RebindSelectedEntry, CanRebindSelectedEntry);
             BulkRebindMatchingMembersCommand = new RelayCommand(BulkRebindMatchingMembers, CanBulkRebindMatchingMembers);
             RemoveDuplicateMembersCommand = new RelayCommand(RemoveDuplicateMembers, CanRemoveDuplicateMembers);
+            RemoveMissingMembersCommand = new RelayCommand(RemoveMissingMembers, CanRemoveMissingMembers);
             RepairRecoveredDocumentCommand = new RelayCommand(RepairRecoveredDocument, CanRepairRecoveredDocumentCommand);
             RefreshOrphanedDocumentsCommand = new RelayCommand(RefreshOrphanedDocuments);
             DeleteSelectedOrphanedDocumentCommand = new RelayCommand(
                 DeleteSelectedOrphanedDocument,
                 CanDeleteSelectedOrphanedDocument);
+            SetLocalizedQueryOptions();
 
             if (Session != null)
             {
@@ -70,6 +97,11 @@ namespace PalCalc.UI.ViewModel
             }
             else
             {
+                SaveDisplayName = Localized(LocalizationCodes.LC_YOUR_PALS_NO_SAVE_SELECTED);
+                SaveStateText = Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_STATE_READ_ONLY);
+                SessionState = Localized(LocalizationCodes.LC_YOUR_PALS_NO_SESSION);
+                SourceState = Localized(LocalizationCodes.LC_YOUR_PALS_SOURCE_UNAVAILABLE_SHORT);
+                RecoveryState = Localized(LocalizationCodes.LC_YOUR_PALS_NO_RECOVERY_DETAILS);
                 UpdateOrphanedDocuments();
             }
 
@@ -83,9 +115,11 @@ namespace PalCalc.UI.ViewModel
         public IRelayCommand RefreshCommand { get; }
         public IRelayCommand DiscardChangesAndReloadCommand { get; }
         public IRelayCommand CreateDocumentCommand { get; }
+        public IRelayCommand ShowAllPalsCommand { get; }
+        public IRelayCommand ReviewAttentionCommand { get; }
         public IRelayCommand ClearQueryCommand { get; }
         public IRelayCommand ToggleSortDirectionCommand { get; }
-        public IRelayCommand SaveCommand { get; }
+        public IAsyncRelayCommand SaveCommand { get; }
         public IRelayCommand CreateGroupCommand { get; }
         public IRelayCommand RenameGroupCommand { get; }
         public IRelayCommand DeleteGroupCommand { get; }
@@ -95,35 +129,35 @@ namespace PalCalc.UI.ViewModel
         public IRelayCommand AddManualDefinitionCommand { get; }
         public IRelayCommand UpdateManualDefinitionCommand { get; }
         public IRelayCommand RemoveSelectedEntryCommand { get; }
+        public IRelayCommand AddPalCommand { get; }
+        public IRelayCommand CloseOverlayCommand { get; }
+        public IRelayCommand AddSelectedPalCommand { get; }
+        public IRelayCommand RepairSelectedEntryCommand { get; }
+        public IRelayCommand<YourPalsEntryRowViewModel> RepairEntryCommand { get; }
+        public IRelayCommand OpenManualEditorCommand { get; }
+        public IRelayCommand EditSelectedManualCommand { get; }
+        public IRelayCommand SaveManualEditorCommand { get; }
+        public IRelayCommand CancelManualEditorCommand { get; }
+        public IRelayCommand CloseDetailsCommand { get; }
         public IRelayCommand RebindSelectedEntryCommand { get; }
         public IRelayCommand BulkRebindMatchingMembersCommand { get; }
         public IRelayCommand RemoveDuplicateMembersCommand { get; }
+        public IRelayCommand RemoveMissingMembersCommand { get; }
         public IRelayCommand RepairRecoveredDocumentCommand { get; }
         public IRelayCommand RefreshOrphanedDocumentsCommand { get; }
         public IRelayCommand DeleteSelectedOrphanedDocumentCommand { get; }
 
-        public IReadOnlyList<YourPalsStatusFilterOption> StatusFilterOptions { get; } =
-        [
-            new(YourPalsStatusFilter.All, "All statuses"),
-            new(YourPalsStatusFilter.Resolved, "Resolved"),
-            new(YourPalsStatusFilter.Unresolved, "Unresolved"),
-            new(YourPalsStatusFilter.Stale, "Stale"),
-            new(YourPalsStatusFilter.Conflict, "Conflict"),
-            new(YourPalsStatusFilter.Invalid, "Invalid"),
-        ];
+        public IReadOnlyList<YourPalsStatusFilterOption> StatusFilterOptions { get; private set; } = [];
 
-        public IReadOnlyList<YourPalsSortOption> SortOptions { get; } =
-        [
-            new(YourPalsSortField.Group, "Group"),
-            new(YourPalsSortField.PalName, "Pal name"),
-            new(YourPalsSortField.Status, "Status"),
-            new(YourPalsSortField.Source, "Source"),
-            new(YourPalsSortField.Instance, "Instance"),
-            new(YourPalsSortField.Location, "Location"),
-            new(YourPalsSortField.Key, "Entry key"),
-        ];
+        public IReadOnlyList<YourPalsSortOption> SortOptions { get; private set; } = [];
 
         public IReadOnlyList<YourPalsGroupFilterOption> GroupFilterOptions => groupFilterOptions;
+
+        public IReadOnlyList<YourPalsAddPalOptionViewModel> AddPalOptions => addPalOptions;
+
+        public IReadOnlyList<PalViewModel> ManualPalOptions => PalViewModel.All;
+
+        public IReadOnlyList<CustomPalInstanceGender> ManualGenderOptions => CustomPalInstanceGender.Options;
 
         [ObservableProperty]
         private IReadOnlyList<YourPalsGroupSummaryViewModel> groups = [];
@@ -147,6 +181,12 @@ namespace PalCalc.UI.ViewModel
         private YourPalsSourceRowViewModel selectedSourceEntry;
 
         [ObservableProperty]
+        private YourPalsAddPalOptionViewModel selectedAddPal;
+
+        [ObservableProperty]
+        private YourPalsGroupSummaryViewModel selectedAddGroup;
+
+        [ObservableProperty]
         private string newGroupName = "";
 
         [ObservableProperty]
@@ -154,6 +194,18 @@ namespace PalCalc.UI.ViewModel
 
         [ObservableProperty]
         private string manualInternalName = "";
+
+        [ObservableProperty]
+        private PalViewModel selectedManualPal;
+
+        [ObservableProperty]
+        private CustomPalInstanceGender selectedManualGender = CustomPalInstanceGender.Male;
+
+        [ObservableProperty]
+        private string manualLevelText = "1";
+
+        [ObservableProperty]
+        private string manualNickname = "";
 
         [ObservableProperty]
         private string editStatus = "";
@@ -180,19 +232,49 @@ namespace PalCalc.UI.ViewModel
         private bool hasOrphanedDocuments;
 
         [ObservableProperty]
-        private string saveScope = "No save selected";
+        private string saveScope = "";
 
         [ObservableProperty]
-        private string sessionState = "No session";
+        private string sessionState = "";
 
         [ObservableProperty]
-        private string sourceState = "Unavailable";
+        private string sourceState = "";
 
         [ObservableProperty]
-        private string recoveryState = "No recovery details";
+        private string recoveryState = "";
 
         [ObservableProperty]
         private string recoveryGuidance = "";
+
+        [ObservableProperty]
+        private string saveDisplayName = "";
+
+        [ObservableProperty]
+        private string saveStateText = "";
+
+        [ObservableProperty]
+        private bool isSaving;
+
+        [ObservableProperty]
+        private bool isAddPalPickerOpen;
+
+        [ObservableProperty]
+        private bool isManualEditorOpen;
+
+        [ObservableProperty]
+        private bool isDetailsOpen;
+
+        [ObservableProperty]
+        private bool isAttentionReviewActive;
+
+        [ObservableProperty]
+        private bool isRepairMode;
+
+        [ObservableProperty]
+        private bool isEditingManualPal;
+
+        [ObservableProperty]
+        private string addPalSearchText = "";
 
         private YourPalsGroupFilterOption selectedGroupFilter;
 
@@ -213,10 +295,15 @@ namespace PalCalc.UI.ViewModel
 
                 queryState.SearchText = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(HasSearchText));
                 OnPropertyChanged(nameof(HasActiveQuery));
                 ApplyQuery();
             }
         }
+
+        public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
+
+        public bool HasAddPalSearchText => !string.IsNullOrWhiteSpace(AddPalSearchText);
 
         public YourPalsStatusFilter SelectedStatusFilter
         {
@@ -262,9 +349,15 @@ namespace PalCalc.UI.ViewModel
             }
         }
 
-        public string SortDirectionText => IsSortAscending ? "Ascending" : "Descending";
+        public string SortDirectionText => Localized(IsSortAscending
+            ? LocalizationCodes.LC_YOUR_PALS_ASCENDING
+            : LocalizationCodes.LC_YOUR_PALS_DESCENDING);
 
         public string EntryCountText => $"{FilteredEntryCount} / {TotalEntryCount}";
+
+        public string ShowingText => $"{Localized(LocalizationCodes.LC_YOUR_PALS_SHOWING)} {EntryCountText}";
+
+        public string SaveContextText => $"{Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_SCOPE)} {SaveDisplayName}";
 
         public bool CanEdit => Session?.CanEdit == true;
 
@@ -272,14 +365,215 @@ namespace PalCalc.UI.ViewModel
 
         public bool CanRepairRecoveredDocument => Session?.CanRepairRecoveredDocument == true;
 
+        public string PageDescription => Localized(LocalizationCodes.LC_YOUR_PALS_PURPOSE);
+
+        public string SelectedCollectionTitle => IsAttentionReviewActive
+            ? Localized(LocalizationCodes.LC_YOUR_PALS_ATTENTION_VIEW)
+            : SelectedGroupSummary?.Name ?? Localized(LocalizationCodes.LC_YOUR_PALS_ALL_PALS);
+
+        public string AddPalDestinationText => Localized(
+            LocalizationCodes.LC_YOUR_PALS_ADD_TO_GROUP,
+            new { group = SelectedAddGroup?.Name ?? Localized(LocalizationCodes.LC_YOUR_PALS_SELECT_GROUP) });
+
+        public string PickerContextText => IsRepairMode
+            ? Localized(
+                LocalizationCodes.LC_YOUR_PALS_REPLACE_IN_GROUP,
+                new
+                {
+                    pal = SelectedEntry?.PalName ?? Localized(LocalizationCodes.LC_YOUR_PALS_UNKNOWN_PAL),
+                    group = SelectedEntry?.GroupName ?? SelectedAddGroup?.Name ??
+                        Localized(LocalizationCodes.LC_YOUR_PALS_SELECT_GROUP),
+                })
+            : AddPalDestinationText;
+
+        public string ManualEditorTitle => Localized(IsEditingManualPal
+            ? LocalizationCodes.LC_YOUR_PALS_EDIT_MANUAL_PAL
+            : LocalizationCodes.LC_YOUR_PALS_ADD_MANUAL_PAL);
+
+        public string ManualEditorActionText => Localized(IsEditingManualPal
+            ? LocalizationCodes.LC_YOUR_PALS_SAVE_MANUAL_PAL
+            : LocalizationCodes.LC_YOUR_PALS_ADD_MANUAL_PAL);
+
+        public string AttentionActionText => SelectedEntry == null
+            ? ""
+            : SelectedEntry.Status switch
+            {
+                YourPalsEntryStatus.Stale => Localized(LocalizationCodes.LC_YOUR_PALS_FIND_REPLACEMENT),
+                YourPalsEntryStatus.Conflict => Localized(LocalizationCodes.LC_YOUR_PALS_CHOOSE_COPY),
+                YourPalsEntryStatus.Unresolved when CanEditSelectedManual => Localized(LocalizationCodes.LC_YOUR_PALS_EDIT_MANUAL_PAL),
+                YourPalsEntryStatus.Invalid when CanEditSelectedManual => Localized(LocalizationCodes.LC_YOUR_PALS_EDIT_MANUAL_PAL),
+                YourPalsEntryStatus.Unresolved or YourPalsEntryStatus.Invalid => Localized(LocalizationCodes.LC_YOUR_PALS_REVIEW),
+                _ => "",
+            };
+
+        public string AttentionActionTooltip => SelectedEntry == null
+            ? ""
+            : SelectedEntry.Status switch
+            {
+                YourPalsEntryStatus.Stale => Localized(LocalizationCodes.LC_YOUR_PALS_FIND_REPLACEMENT_DESCRIPTION),
+                YourPalsEntryStatus.Conflict => Localized(LocalizationCodes.LC_YOUR_PALS_CHOOSE_COPY_DESCRIPTION),
+                _ => SelectedEntry.StatusExplanation,
+            };
+
+        public string RepairPickerTitle => SelectedEntry?.Status == YourPalsEntryStatus.Conflict
+            ? Localized(LocalizationCodes.LC_YOUR_PALS_CHOOSE_COPY)
+            : Localized(LocalizationCodes.LC_YOUR_PALS_FIND_REPLACEMENT);
+
+        public string RepairPickerActionText => SelectedEntry?.Status == YourPalsEntryStatus.Conflict
+            ? Localized(LocalizationCodes.LC_YOUR_PALS_USE_SELECTED_COPY)
+            : Localized(LocalizationCodes.LC_YOUR_PALS_USE_REPLACEMENT);
+
+        public string PickerActionText => IsRepairMode ? RepairPickerActionText : AddPalDestinationText;
+
+        public bool HasAddPalOptions => AddPalOptions.Count > 0;
+
+        public bool HasSelectedAddPal => SelectedAddPal != null;
+
+        public bool CanEditSelectedManual => CanEdit &&
+            SelectedEntry?.Member?.KnownKind == YourPalsMemberKind.ManualDefinitionReference;
+
+        public bool IsSelectedEntryProblem => SelectedEntry != null &&
+            SelectedEntry.Status != YourPalsEntryStatus.Resolved;
+
+        public int CurrentCollectionEntryCount => SelectedGroupId == null
+            ? allEntries.Count
+            : allEntries.Count(entry => string.Equals(entry.GroupId, SelectedGroupId, StringComparison.Ordinal));
+
+        public bool HasEmptyCollection => HasGroups &&
+            CurrentCollectionEntryCount == 0 &&
+            !HasSourceUnavailableCollectionState &&
+            !HasNoSourceEntriesCollectionState;
+
+        public bool HasNoQueryMatches => CurrentCollectionEntryCount > 0 &&
+            FilteredEntryCount == 0 &&
+            (!string.IsNullOrWhiteSpace(SearchText) ||
+             SelectedStatusFilter != YourPalsStatusFilter.All ||
+             IsAttentionReviewActive);
+
+        public bool HasTextOrStatusQuery =>
+            !string.IsNullOrWhiteSpace(SearchText) ||
+            SelectedStatusFilter != YourPalsStatusFilter.All ||
+            IsAttentionReviewActive;
+
+        public bool HasNoSourceEntries => Session?.IsSourceAvailable == true && !HasSourceEntries;
+
+        public bool IsSourceUnavailable => Session != null && !Session.IsSourceAvailable;
+
+        public bool HasSourceUnavailableCollectionState => HasGroups &&
+            CurrentCollectionEntryCount == 0 &&
+            !HasTextOrStatusQuery &&
+            IsSourceUnavailable;
+
+        public bool HasNoSourceEntriesCollectionState => HasGroups &&
+            CurrentCollectionEntryCount == 0 &&
+            !HasTextOrStatusQuery &&
+            !IsSourceUnavailable &&
+            HasNoSourceEntries;
+
+        public bool IsSaveAttention => Session?.IsDirty == true ||
+            Session?.State is SavePalsSessionState.WriteFailed or SavePalsSessionState.ExternalConflict ||
+            Session?.IsReadOnly == true;
+
+        public bool IsSaveHealthy => Session != null && !IsSaveAttention && !IsSaving;
+
+        public bool IsAllPalsSelected => !IsAttentionReviewActive && SelectedGroupSummary == null;
+
+        public int AttentionEntryCount => allEntries.Count(entry => entry.Status != YourPalsEntryStatus.Resolved);
+
+        public bool HasAttentionEntries => AttentionEntryCount > 0;
+
+        // "Missing" is specifically a Pal that left the save, which is the only
+        // status that bulk removal is safe for; the others may still be repairable.
+        public int MissingEntryCount =>
+            allEntries.Count(entry => entry.Status == YourPalsEntryStatus.Stale);
+
+        public bool HasMissingEntries => MissingEntryCount > 0;
+
+        public string CollectionSummaryText => Localized(
+            LocalizationCodes.LC_YOUR_PALS_COLLECTION_SUMMARY,
+            new
+            {
+                pals = TotalEntryCount,
+                groups = Groups.Count,
+                attention = AttentionEntryCount,
+            });
+
         public string OrphanedDocumentCountText =>
-            $"Orphaned documents: {OrphanedDocuments.Count}";
+            Localized(
+                LocalizationCodes.LC_YOUR_PALS_ORPHANED_DOCUMENT_COUNT,
+                new { count = OrphanedDocuments.Count });
 
-        public YourPalsSolverSourceProjection SolverSource =>
-            Session?.BuildSolverSource() ?? new YourPalsSolverSourceProjection([], []);
+        private YourPalsSolverSourceProjection solverSource = new([], []);
 
-        [ObservableProperty]
+        // Cached rather than rebuilt per access: several bindings read it, and the
+        // solver must run against exactly the projection whose counts were shown.
+        public YourPalsSolverSourceProjection SolverSource => solverSource;
+
+        public int SolverReadyCount => SolverSource.Entries.Count;
+
+        public int SolverExcludedCount => SolverSource.ExcludedEntries.Count;
+
+        public string SolverSourceSummaryText => Localized(
+            LocalizationCodes.LC_YOUR_PALS_SOLVER_READY_COUNT,
+            new { count = SolverReadyCount });
+
+        public string SolverSourceExcludedText => Localized(
+            LocalizationCodes.LC_YOUR_PALS_SOLVER_EXCLUDED_COUNT,
+            new { count = SolverExcludedCount });
+
+        // The solver silently drops references whose Pal is gone. Name that in the
+        // panel so short or empty results have a visible explanation.
+        public int SolverMissingCount => SolverSource.ExcludedEntries
+            .Count(excluded => excluded.Status == YourPalsEntryStatus.Stale);
+
+        public bool HasSolverMissingEntries => UseAsSolverSource && SolverMissingCount > 0;
+
+        public bool IsSolverSourceEmpty => UseAsSolverSource && SolverReadyCount == 0;
+
+        public string SolverSourceMissingText => Localized(
+            LocalizationCodes.LC_YOUR_PALS_SOLVER_MISSING_COUNT,
+            new { count = SolverMissingCount });
+
+        public string SolverSourceEmptyText =>
+            Localized(LocalizationCodes.LC_YOUR_PALS_SOLVER_SOURCE_EMPTY);
+
+        public string SolverSourceStateText => UseAsSolverSource
+            ? Localized(LocalizationCodes.LC_YOUR_PALS_SOLVER_INCLUDED)
+            : Localized(LocalizationCodes.LC_YOUR_PALS_SOLVER_NOT_INCLUDED);
+
         private bool useAsSolverSource;
+
+        public bool UseAsSolverSource
+        {
+            get => useAsSolverSource;
+            set
+            {
+                if (!SetProperty(ref useAsSolverSource, value))
+                    return;
+
+                if (Session?.Identity is SaveIdentity identity && AppSettings.Current != null)
+                {
+                    var preferences = AppSettings.Current.YourPalsSolverSourceBySave ??= new();
+                    var hadPrevious = preferences.TryGetValue(identity.CanonicalKey, out var previous);
+                    preferences[identity.CanonicalKey] = value;
+                    if (!Storage.TrySaveAppSettings(AppSettings.Current))
+                    {
+                        if (hadPrevious)
+                            preferences[identity.CanonicalKey] = previous;
+                        else
+                            preferences.Remove(identity.CanonicalKey);
+
+                        useAsSolverSource = hadPrevious && previous;
+                        OnPropertyChanged(nameof(UseAsSolverSource));
+                        EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_STATE_FAILED);
+                    }
+                }
+
+                OnPropertyChanged(nameof(SolverSourceStateText));
+                OnPropertyChanged(nameof(HasSolverMissingEntries));
+                OnPropertyChanged(nameof(IsSolverSourceEmpty));
+            }
+        }
 
         public string SelectedGroupId
         {
@@ -290,6 +584,8 @@ namespace PalCalc.UI.ViewModel
                     return;
 
                 queryState.SelectedGroupId = value;
+                if (value != null)
+                    IsAttentionReviewActive = false;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasActiveQuery));
                 var selectedOption = groupFilterOptions.FirstOrDefault(option =>
@@ -329,16 +625,329 @@ namespace PalCalc.UI.ViewModel
             if (Session == null)
                 return;
 
-            Session.RefreshCurrent();
+            refreshSource?.Invoke();
+            if (refreshSource == null)
+                Session.RefreshCurrent();
         }
+
+        private void ShowAllPals()
+        {
+            IsAttentionReviewActive = false;
+            SelectedGroupId = null;
+        }
+
+        private void ReviewAttention()
+        {
+            IsAttentionReviewActive = true;
+            SelectedGroupId = null;
+            SelectedStatusFilter = YourPalsStatusFilter.All;
+            SearchText = "";
+        }
+
+        private void OpenAddPalPicker()
+        {
+            if (Session == null || Groups.Count == 0)
+                return;
+
+            SelectedAddGroup = SelectedGroupSummary ?? Groups[0];
+            AddPalSearchText = "";
+            SelectedAddPal = null;
+            IsManualEditorOpen = false;
+            IsAddPalPickerOpen = true;
+            UpdateAddPalOptions();
+        }
+
+        private void CloseOverlay()
+        {
+            IsAddPalPickerOpen = false;
+            IsManualEditorOpen = false;
+            IsRepairMode = false;
+            SelectedAddPal = null;
+        }
+
+        private void AddSelectedPal()
+        {
+            if (Session == null || SelectedAddPal == null)
+                return;
+
+            if (IsRepairMode)
+            {
+                if (SelectedEntry == null)
+                {
+                    EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_REVIEW);
+                    return;
+                }
+
+                if (!Session.TryRebindImportedMember(
+                        SelectedEntry.GroupId,
+                        SelectedEntry.PalEntryKey,
+                        SelectedAddPal.SourceEntry,
+                        out var rebindError))
+                {
+                    EditStatus = rebindError;
+                    return;
+                }
+
+                EditStatus = Localized(
+                    LocalizationCodes.LC_YOUR_PALS_REBOUND_ENTRY,
+                    new { pal = SelectedAddPal.PalName });
+                var repairedKey = SelectedEntry.PalEntryKey;
+                CloseOverlay();
+                UpdateFromSession(repairedKey);
+                return;
+            }
+
+            if (SelectedAddGroup == null)
+                return;
+
+            if (Session.TryAddImportedMember(
+                    SelectedAddGroup.GroupId,
+                    SelectedAddPal.SourceEntry,
+                    out var entryKey,
+                    out var error))
+            {
+                EditStatus = Localized(
+                    LocalizationCodes.LC_YOUR_PALS_ADDED_TO_GROUP,
+                    new { pal = SelectedAddPal.PalName, group = SelectedAddGroup.Name });
+                IsAddPalPickerOpen = false;
+                SelectedAddPal = null;
+                UpdateFromSession(entryKey);
+            }
+            else
+            {
+                EditStatus = error;
+            }
+        }
+
+        private void OpenManualEditor()
+        {
+            if (!CanOpenManualEditor())
+                return;
+
+            IsEditingManualPal = false;
+            SelectedManualPal = null;
+            SelectedManualGender = CustomPalInstanceGender.Male;
+            ManualLevelText = "1";
+            ManualNickname = "";
+            IsManualEditorOpen = true;
+            IsAddPalPickerOpen = true;
+            IsRepairMode = false;
+            OnPropertyChanged(nameof(ManualEditorTitle));
+            OnPropertyChanged(nameof(ManualEditorActionText));
+            SaveManualEditorCommand.NotifyCanExecuteChanged();
+        }
+
+        private void OpenSelectedManualEditor()
+        {
+            if (!CanEditSelectedManual)
+                return;
+
+            var definition = Session?.Document?.ManualDefinitions?.FirstOrDefault(candidate =>
+                string.Equals(candidate?.ManualDefinitionId, SelectedEntry?.Member?.ManualDefinitionId, StringComparison.Ordinal));
+            var record = Session?.ResolvedMembers?.FirstOrDefault(candidate =>
+                string.Equals(candidate?.Member?.PalEntryKey, SelectedEntry?.PalEntryKey, StringComparison.Ordinal))?.ResolvedRecord;
+            var internalName = record?.Pal?.InternalName ?? definition?.RawInternalName;
+            SelectedManualPal = PalViewModel.All.FirstOrDefault(pal =>
+                string.Equals(pal.ModelObject.InternalName, internalName, StringComparison.OrdinalIgnoreCase));
+            SelectedManualGender = ManualGenderOptions.FirstOrDefault(option => option.Value == record?.Gender) ??
+                ManualGenderOptions.First();
+            ManualLevelText = record?.Level.ToString(CultureInfo.InvariantCulture) ?? ReadManualInt(definition, "level", "1");
+            ManualNickname = record?.NickName ?? ReadManualString(definition, "nickname");
+            IsEditingManualPal = true;
+            IsManualEditorOpen = true;
+            IsAddPalPickerOpen = true;
+            IsRepairMode = false;
+            SelectedAddGroup = Groups.FirstOrDefault(group =>
+                string.Equals(group.GroupId, SelectedEntry.GroupId, StringComparison.Ordinal));
+            OnPropertyChanged(nameof(ManualEditorTitle));
+            OnPropertyChanged(nameof(ManualEditorActionText));
+            SaveManualEditorCommand.NotifyCanExecuteChanged();
+        }
+
+        private void SaveManualEditor()
+        {
+            if (Session == null || SelectedManualPal == null || !int.TryParse(ManualLevelText, out var level) || level < 1)
+            {
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_MANUAL_EDITOR_INVALID);
+                return;
+            }
+
+            var rawValues = new Dictionary<string, JToken>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["gender"] = new JValue(SelectedManualGender.Value.ToString()),
+                ["level"] = new JValue(level),
+            };
+            if (IsEditingManualPal || !string.IsNullOrWhiteSpace(ManualNickname))
+                rawValues["nickname"] = new JValue(ManualNickname?.Trim() ?? "");
+
+            if (IsEditingManualPal)
+            {
+                if (Session.TryUpdateManualDefinition(
+                        SelectedEntry?.Member?.ManualDefinitionId,
+                        SelectedManualPal.ModelObject.InternalName,
+                        rawValues,
+                        out var error))
+                {
+                    EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_MANUAL_UPDATED);
+                    CloseOverlay();
+                    UpdateFromSession(SelectedEntry?.PalEntryKey);
+                }
+                else
+                {
+                    EditStatus = error;
+                }
+
+                return;
+            }
+
+            if (SelectedAddGroup == null)
+            {
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_SELECT_GROUP);
+                return;
+            }
+
+            if (Session.TryAddManualDefinition(
+                    SelectedAddGroup.GroupId,
+                    SelectedManualPal.ModelObject.InternalName,
+                    rawValues,
+                    out _,
+                    out var entryKey,
+                    out var addError))
+            {
+                EditStatus = Localized(
+                    LocalizationCodes.LC_YOUR_PALS_ADDED_TO_GROUP,
+                    new { pal = YourPalsDisplayName.For(SelectedManualPal.ModelObject), group = SelectedAddGroup.Name });
+                CloseOverlay();
+                UpdateFromSession(entryKey);
+            }
+            else
+            {
+                EditStatus = addError;
+            }
+        }
+
+        private void CancelManualEditor()
+        {
+            IsManualEditorOpen = false;
+            SelectedManualPal = null;
+            SaveManualEditorCommand.NotifyCanExecuteChanged();
+        }
+
+        private void CloseDetails()
+        {
+            IsDetailsOpen = false;
+            SelectedEntry = null;
+        }
+
+        private void OpenSelectedEntryAction()
+        {
+            if (SelectedEntry == null)
+                return;
+
+            OpenEntryAction(SelectedEntry);
+        }
+
+        private void OpenEntryAction(YourPalsEntryRowViewModel entry)
+        {
+            if (entry == null)
+                return;
+
+            SelectedEntry = entry;
+            if (entry.Member?.KnownKind == YourPalsMemberKind.ManualDefinitionReference &&
+                (entry.Status == YourPalsEntryStatus.Unresolved || entry.Status == YourPalsEntryStatus.Invalid))
+            {
+                OpenSelectedManualEditor();
+                return;
+            }
+
+            if (entry.Member?.KnownKind == YourPalsMemberKind.ImportedReference && CanEdit)
+            {
+                SelectedAddGroup = Groups.FirstOrDefault(group =>
+                    string.Equals(group.GroupId, entry.GroupId, StringComparison.Ordinal));
+                AddPalSearchText = "";
+                SelectedAddPal = null;
+                IsManualEditorOpen = false;
+                IsRepairMode = true;
+                IsAddPalPickerOpen = true;
+                UpdateAddPalOptions();
+            }
+        }
+
+        private bool CanOpenSelectedEntryAction() => CanOpenEntryAction(SelectedEntry);
+
+        private bool CanOpenEntryAction(YourPalsEntryRowViewModel entry) =>
+            entry != null && entry.Status != YourPalsEntryStatus.Resolved && CanEdit &&
+            (entry.Member?.KnownKind == YourPalsMemberKind.ImportedReference ||
+             entry.Member?.KnownKind == YourPalsMemberKind.ManualDefinitionReference);
+
+        private bool CanOpenAddPalPicker() => CanEdit && Groups.Count > 0;
+
+        private bool CanAddSelectedPal() => CanEdit &&
+            SelectedAddPal != null &&
+            (IsRepairMode ? SelectedEntry != null : SelectedAddGroup != null) &&
+            !SelectedAddPal.IsAlreadyInSelectedGroup &&
+            Session?.CanUseSourceEntry(SelectedAddPal.SourceEntry) == true;
+
+        private bool CanOpenManualEditor() => CanEdit && SelectedAddGroup != null;
+
+        private bool CanSaveManualEditor() => CanEdit && SelectedManualPal != null &&
+            int.TryParse(ManualLevelText, out var level) && level >= 1;
+
+        private void UpdateAddPalOptions()
+        {
+            var selectedGroupId = SelectedAddGroup?.GroupId;
+            var existingKeys = allEntries
+                .Where(entry => string.Equals(entry.GroupId, selectedGroupId, StringComparison.Ordinal))
+                .Where(entry => !IsRepairMode || !string.Equals(
+                    entry.PalEntryKey,
+                    SelectedEntry?.PalEntryKey,
+                    StringComparison.Ordinal))
+                .Select(entry => entry.ImportIdentityKey)
+                .Where(key => !string.IsNullOrEmpty(key))
+                .ToHashSet(StringComparer.Ordinal);
+            var search = AddPalSearchText?.Trim() ?? "";
+            var culture = QueryCulture();
+            var compareInfo = culture.CompareInfo;
+            var options = SourceEntries
+                .Where(source => Session?.CanUseSourceEntry(source.Entry) == true)
+                .Where(source => string.IsNullOrWhiteSpace(search) ||
+                    Contains(source.PalName, search, compareInfo, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) ||
+                    Contains(source.Nickname, search, compareInfo, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) ||
+                    Contains(source.Location, search, compareInfo, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace))
+                .Select(source => new YourPalsAddPalOptionViewModel(source, existingKeys.Contains(source.ImportIdentityKey)))
+                .ToList();
+            addPalOptions = options.AsReadOnly();
+            OnPropertyChanged(nameof(AddPalOptions));
+            OnPropertyChanged(nameof(HasAddPalOptions));
+            AddSelectedPalCommand.NotifyCanExecuteChanged();
+        }
+
+        private static string ReadManualString(YourPalsManualDefinition definition, string key) =>
+            definition?.RawValues?.FirstOrDefault(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase)).Value?.Type == JTokenType.String
+                ? definition.RawValues.First(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase)).Value.Value<string>()
+                : "";
+
+        private static string ReadManualInt(YourPalsManualDefinition definition, string key, string fallback) =>
+            definition?.RawValues?.FirstOrDefault(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase)).Value is JToken token &&
+            int.TryParse(token.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+                ? value.ToString(CultureInfo.InvariantCulture)
+                : fallback;
 
         private void DiscardChangesAndReload()
         {
             if (Session == null)
                 return;
 
+            var confirmation = MessageBox.Show(
+                Localized(LocalizationCodes.LC_YOUR_PALS_DISCARD_CONFIRM),
+                Localized(LocalizationCodes.LC_YOUR_PALS_DISCARD_TITLE),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+
             if (Session.TryDiscardChangesAndReload(out var error))
-                EditStatus = "Local changes discarded and document reloaded.";
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_DISCARDED_RELOADED);
             else
                 EditStatus = error;
         }
@@ -351,30 +960,44 @@ namespace PalCalc.UI.ViewModel
                 return;
 
             if (Session.TryCreateDocument(out var error))
-                EditStatus = "Your Pals document created. Save to persist changes.";
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_DOCUMENT_CREATED);
             else
                 EditStatus = error;
         }
 
         private bool CanCreateNewDocument() => CanCreateDocument;
 
-        private void Save()
+        private async Task SaveAsync()
         {
-            if (Session == null)
+            if (Session == null || IsSaving)
                 return;
 
-            if (Session.TrySave())
+            IsSaving = true;
+            SaveStateText = Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_STATE_SAVING);
+            OnPropertyChanged(nameof(IsSaveHealthy));
+            try
             {
-                EditStatus = "Saved";
+                if (await Task.Run(() => Session.TrySave()))
+                {
+                    EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_STATE_SAVED);
+                }
+                else
+                {
+                    EditStatus = Session.Diagnostics.LastOrDefault(diagnostic =>
+                        diagnostic.Code == YourPalsDiagnosticCode.WriteFailed ||
+                        diagnostic.Code == YourPalsDiagnosticCode.ExternalConflict)?.Message
+                        ?? Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_FAILED);
+                }
+
                 UpdateFromSession();
             }
-            else
+            finally
             {
-                EditStatus = Session.Diagnostics.LastOrDefault(diagnostic =>
-                    diagnostic.Code == YourPalsDiagnosticCode.WriteFailed ||
-                    diagnostic.Code == YourPalsDiagnosticCode.ExternalConflict)?.Message
-                    ?? "The Your Pals document could not be saved.";
-                UpdateFromSession();
+                IsSaving = false;
+                SaveStateText = Session == null
+                    ? Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_STATE_READ_ONLY)
+                    : BuildSaveStateText(Session);
+                OnPropertyChanged(nameof(IsSaveHealthy));
             }
         }
 
@@ -386,7 +1009,7 @@ namespace PalCalc.UI.ViewModel
             if (Session.TryCreateGroup(NewGroupName, out _, out var error))
             {
                 NewGroupName = "";
-                EditStatus = "Group created. Save to persist changes.";
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_GROUP_CREATED);
             }
             else
             {
@@ -400,7 +1023,7 @@ namespace PalCalc.UI.ViewModel
                 return;
 
             if (Session.TryRenameGroup(SelectedGroupSummary?.GroupId, RenameGroupName, out var error))
-                EditStatus = "Group renamed. Save to persist changes.";
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_GROUP_RENAMED);
             else
                 EditStatus = error;
         }
@@ -412,7 +1035,7 @@ namespace PalCalc.UI.ViewModel
 
             if (Session.TryDeleteGroup(SelectedGroupSummary?.GroupId, out var error))
             {
-                EditStatus = "Group deleted. Save to persist changes.";
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_GROUP_DELETED);
                 SelectedGroupSummary = null;
             }
             else
@@ -431,7 +1054,7 @@ namespace PalCalc.UI.ViewModel
                 return;
 
             if (Session.TryMoveGroup(SelectedGroupSummary?.GroupId, offset, out var error))
-                EditStatus = "Group order changed. Save to persist changes.";
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_GROUP_ORDER_CHANGED);
             else
                 EditStatus = error;
         }
@@ -447,7 +1070,13 @@ namespace PalCalc.UI.ViewModel
                     out _,
                     out var error))
             {
-                EditStatus = "Pal added to the group. Save to persist changes.";
+                EditStatus = Localized(
+                    LocalizationCodes.LC_YOUR_PALS_ADDED_TO_GROUP,
+                    new
+                    {
+                        pal = SelectedSourceEntry?.PalName ?? Localized(LocalizationCodes.LC_YOUR_PALS_UNKNOWN_PAL),
+                        group = SelectedGroupSummary?.Name ?? Localized(LocalizationCodes.LC_YOUR_PALS_SELECT_GROUP),
+                    });
             }
             else
             {
@@ -468,8 +1097,15 @@ namespace PalCalc.UI.ViewModel
                     out _,
                     out var error))
             {
+                var manualName = ManualInternalName;
                 ManualInternalName = "";
-                EditStatus = "Manual Pal added. Save to persist changes.";
+                EditStatus = Localized(
+                    LocalizationCodes.LC_YOUR_PALS_ADDED_TO_GROUP,
+                    new
+                    {
+                        pal = manualName,
+                        group = SelectedGroupSummary?.Name ?? Localized(LocalizationCodes.LC_YOUR_PALS_SELECT_GROUP),
+                    });
             }
             else
             {
@@ -488,7 +1124,7 @@ namespace PalCalc.UI.ViewModel
                     null,
                     out var error))
             {
-                EditStatus = "Manual Pal updated. Save to persist changes.";
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_MANUAL_UPDATED);
             }
             else
             {
@@ -501,12 +1137,26 @@ namespace PalCalc.UI.ViewModel
             if (Session == null)
                 return;
 
+            var confirmation = MessageBox.Show(
+                Localized(
+                    LocalizationCodes.LC_YOUR_PALS_REMOVE_MEMBER_CONFIRM,
+                    new
+                    {
+                        pal = SelectedEntry?.PalName ?? Localized(LocalizationCodes.LC_YOUR_PALS_UNKNOWN_PAL),
+                        group = SelectedEntry?.GroupName ?? Localized(LocalizationCodes.LC_YOUR_PALS_UNNAMED_GROUP),
+                    }),
+                Localized(LocalizationCodes.LC_YOUR_PALS_REMOVE_FROM_GROUP),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+
             if (Session.TryRemoveMember(
                     SelectedEntry?.GroupId,
                     SelectedEntry?.PalEntryKey,
                     out var error))
             {
-                EditStatus = "Member removed from the group. Save to persist changes.";
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_MEMBER_REMOVED);
                 SelectedEntry = null;
             }
             else
@@ -526,7 +1176,9 @@ namespace PalCalc.UI.ViewModel
                     SelectedSourceEntry?.Entry,
                     out var error))
             {
-                EditStatus = "Member rebound to the selected source Pal. Save to persist changes.";
+                EditStatus = Localized(
+                    LocalizationCodes.LC_YOUR_PALS_REBOUND_ENTRY,
+                    new { pal = SelectedSourceEntry?.PalName ?? Localized(LocalizationCodes.LC_YOUR_PALS_UNKNOWN_PAL) });
             }
             else
             {
@@ -544,7 +1196,9 @@ namespace PalCalc.UI.ViewModel
                     out var repairedCount,
                     out var error))
             {
-                EditStatus = $"Rebound {repairedCount} matching member(s). Save to persist changes.";
+                EditStatus = Localized(
+                    LocalizationCodes.LC_YOUR_PALS_REBOUND_MATCHING,
+                    new { count = repairedCount });
             }
             else
             {
@@ -559,7 +1213,36 @@ namespace PalCalc.UI.ViewModel
 
             if (Session.TryRemoveDuplicateMembers(out var summary, out var error))
             {
-                EditStatus = $"Removed {summary.RemovedDuplicateMembers} duplicate member(s). Save to persist changes.";
+                EditStatus = Localized(
+                    LocalizationCodes.LC_YOUR_PALS_DUPLICATES_REMOVED,
+                    new { count = summary.RemovedDuplicateMembers });
+            }
+            else
+            {
+                EditStatus = error;
+            }
+        }
+
+        private void RemoveMissingMembers()
+        {
+            if (Session == null)
+                return;
+
+            var confirmation = MessageBox.Show(
+                Localized(
+                    LocalizationCodes.LC_YOUR_PALS_REMOVE_MISSING_CONFIRM,
+                    new { count = MissingEntryCount }),
+                Localized(LocalizationCodes.LC_YOUR_PALS_REMOVE_MISSING),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+
+            if (Session.TryRemoveMissingMembers(out var removedCount, out var error))
+            {
+                EditStatus = Localized(
+                    LocalizationCodes.LC_YOUR_PALS_MISSING_REMOVED,
+                    new { count = removedCount });
             }
             else
             {
@@ -574,7 +1257,9 @@ namespace PalCalc.UI.ViewModel
 
             if (Session.TryRepairRecoveredDocument(out var summary, out var error))
             {
-                EditStatus = $"Recovered and saved Your Pals ({summary.TotalChanges} repair change(s)).";
+                EditStatus = Localized(
+                    LocalizationCodes.LC_YOUR_PALS_RECOVERED_SAVED,
+                    new { count = summary.TotalChanges });
             }
             else
             {
@@ -590,9 +1275,15 @@ namespace PalCalc.UI.ViewModel
             if (orphanedDocumentManager == null || SelectedOrphanedDocument == null)
                 return;
 
+            // A document whose owner could not be read is still deletable, but say
+            // plainly that it could not be verified before removing it.
             var result = MessageBox.Show(
-                $"Delete the orphaned Your Pals document?\n\n{SelectedOrphanedDocument.DocumentPath}\n\nIts document and backup will be removed.",
-                "Delete orphaned document",
+                Localized(
+                    SelectedOrphanedDocument.OwnerSaveIdentity.HasValue
+                        ? LocalizationCodes.LC_YOUR_PALS_DELETE_ORPHAN_CONFIRM
+                        : LocalizationCodes.LC_YOUR_PALS_DELETE_ORPHAN_UNVERIFIED_CONFIRM,
+                    new { path = SelectedOrphanedDocument.DocumentPath }),
+                Localized(LocalizationCodes.LC_YOUR_PALS_DELETE_ORPHAN_TITLE),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes)
@@ -602,7 +1293,7 @@ namespace PalCalc.UI.ViewModel
                     SelectedOrphanedDocument,
                     out var error))
             {
-                EditStatus = "Orphaned document deleted.";
+                EditStatus = Localized(LocalizationCodes.LC_YOUR_PALS_ORPHAN_DELETED);
                 UpdateOrphanedDocuments();
             }
             else
@@ -613,6 +1304,7 @@ namespace PalCalc.UI.ViewModel
 
         private void ClearQuery()
         {
+            IsAttentionReviewActive = false;
             SearchText = "";
             SelectedStatusFilter = YourPalsStatusFilter.All;
             SelectedGroupId = null;
@@ -645,11 +1337,12 @@ namespace PalCalc.UI.ViewModel
             dispatcher.BeginInvoke(UpdateFromSession, DispatcherPriority.DataBind);
         }
 
-        private void UpdateFromSession()
+        private void UpdateFromSession(string preferredSelectedKey = null)
         {
             if (disposed || Session == null)
                 return;
 
+            SetLocalizedQueryOptions();
             var selectedKey = SelectedEntry?.PalEntryKey;
             var selectedGroupId = SelectedGroupSummary?.GroupId;
             var selectedSourceReferenceKey = SelectedSourceEntry?.ReferenceKey;
@@ -690,47 +1383,150 @@ namespace PalCalc.UI.ViewModel
                 .ToList()
                 .AsReadOnly();
 
+            solverSource = Session.BuildSolverSource();
+
             HasGroups = Groups.Count > 0;
             HasSourceEntries = SourceEntries.Count > 0;
+            SelectedAddGroup = Groups.FirstOrDefault(group =>
+                string.Equals(group.GroupId, SelectedAddGroup?.GroupId ?? SelectedGroupId, StringComparison.Ordinal)) ?? Groups.FirstOrDefault();
+            UpdateAddPalOptions();
             HasDiagnostics = Diagnostics.Count > 0;
             SaveScope = Session.Identity.CanonicalKey;
-            SessionState = Session.State.ToString();
-            SourceState = Session.SourceSnapshot?.IsAvailable == true ? "Available" : "Unavailable";
+            SessionState = BuildSessionStateText(Session);
+            SourceState = IsSourceUnavailable
+                ? Localized(LocalizationCodes.LC_YOUR_PALS_SOURCE_UNAVAILABLE_SHORT)
+                : Localized(LocalizationCodes.LC_YOUR_PALS_SOURCE_AVAILABLE);
+            SaveDisplayName = BuildSaveDisplayName(Session);
+            OnPropertyChanged(nameof(SaveContextText));
+            SaveStateText = IsSaving
+                ? Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_STATE_SAVING)
+                : BuildSaveStateText(Session);
             RecoveryState = Diagnostics.Count == 0
-                ? "No recovery details"
+                ? Localized(LocalizationCodes.LC_YOUR_PALS_NO_RECOVERY_DETAILS)
                 : string.Join("; ", Diagnostics.Select(diagnostic => diagnostic.Message));
             RecoveryGuidance = BuildRecoveryGuidance(Session);
 
             UpdateOrphanedDocuments();
-            ApplyQuery(selectedKey);
+            ApplyQuery(preferredSelectedKey ?? selectedKey);
             OnPropertyChanged(nameof(CanEdit));
             OnPropertyChanged(nameof(CanCreateDocument));
             OnPropertyChanged(nameof(CanRepairRecoveredDocument));
             OnPropertyChanged(nameof(CanDiscardChangesAndReload));
             OnPropertyChanged(nameof(SolverSource));
+            OnPropertyChanged(nameof(PageDescription));
+            OnPropertyChanged(nameof(SelectedCollectionTitle));
+            OnPropertyChanged(nameof(IsAllPalsSelected));
+            OnPropertyChanged(nameof(CollectionSummaryText));
+            OnPropertyChanged(nameof(CurrentCollectionEntryCount));
+            OnPropertyChanged(nameof(HasEmptyCollection));
+            OnPropertyChanged(nameof(HasNoQueryMatches));
+            OnPropertyChanged(nameof(HasTextOrStatusQuery));
+            OnPropertyChanged(nameof(HasNoSourceEntries));
+            OnPropertyChanged(nameof(IsSourceUnavailable));
+            OnPropertyChanged(nameof(HasSourceUnavailableCollectionState));
+            OnPropertyChanged(nameof(HasNoSourceEntriesCollectionState));
+            OnPropertyChanged(nameof(IsSaveAttention));
+            OnPropertyChanged(nameof(IsSaveHealthy));
+            OnPropertyChanged(nameof(AddPalDestinationText));
+            OnPropertyChanged(nameof(PickerContextText));
+            OnPropertyChanged(nameof(CanEditSelectedManual));
+            OnPropertyChanged(nameof(IsSelectedEntryProblem));
+            OnPropertyChanged(nameof(HasAttentionEntries));
+            OnPropertyChanged(nameof(MissingEntryCount));
+            OnPropertyChanged(nameof(HasMissingEntries));
+            OnPropertyChanged(nameof(SolverMissingCount));
+            OnPropertyChanged(nameof(HasSolverMissingEntries));
+            OnPropertyChanged(nameof(IsSolverSourceEmpty));
+            OnPropertyChanged(nameof(SolverSourceMissingText));
+            OnPropertyChanged(nameof(SolverSourceEmptyText));
+            OnPropertyChanged(nameof(SolverReadyCount));
+            OnPropertyChanged(nameof(SolverExcludedCount));
+            OnPropertyChanged(nameof(SolverSourceSummaryText));
+            OnPropertyChanged(nameof(SolverSourceExcludedText));
+            OnPropertyChanged(nameof(SolverSourceStateText));
             NotifyEditingCommands();
         }
+
+        private void SetLocalizedQueryOptions()
+        {
+            StatusFilterOptions = new List<YourPalsStatusFilterOption>
+            {
+                new(YourPalsStatusFilter.All, Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_ALL)),
+                new(YourPalsStatusFilter.Resolved, Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_READY)),
+                new(YourPalsStatusFilter.Unresolved, Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_CANNOT_IDENTIFY)),
+                new(YourPalsStatusFilter.Stale, Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_NO_LONGER_IN_SAVE)),
+                new(YourPalsStatusFilter.Conflict, Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_CONFLICTING_COPIES)),
+                new(YourPalsStatusFilter.Invalid, Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_NEEDS_REPAIR)),
+            }.AsReadOnly();
+            SortOptions = new List<YourPalsSortOption>
+            {
+                new(YourPalsSortField.PalName, Localized(LocalizationCodes.LC_YOUR_PALS_PAL)),
+                new(YourPalsSortField.Status, Localized(LocalizationCodes.LC_YOUR_PALS_STATUS)),
+                new(YourPalsSortField.Location, Localized(LocalizationCodes.LC_COMMON_LOCATION)),
+            }.AsReadOnly();
+            OnPropertyChanged(nameof(StatusFilterOptions));
+            OnPropertyChanged(nameof(SortOptions));
+        }
+
+        private static string Localized(LocalizationCodes code) => code.Bind().Value;
+
+        private static string Localized(LocalizationCodes code, object formatArgs) => code.Bind(formatArgs).Value;
+
+        private static string BuildSaveDisplayName(SavePalsSession session)
+        {
+            var playerName = session.CachedSave?.PlayerName;
+            var worldName = session.CachedSave?.WorldName;
+            if (!string.IsNullOrWhiteSpace(playerName) && !string.IsNullOrWhiteSpace(worldName))
+                return $"{playerName} · {worldName}";
+            if (!string.IsNullOrWhiteSpace(worldName))
+                return worldName;
+            return session.Identity.CanonicalKey;
+        }
+
+        private static string BuildSaveStateText(SavePalsSession session)
+        {
+            if (session.State is SavePalsSessionState.WriteFailed or SavePalsSessionState.ExternalConflict)
+                return Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_STATE_FAILED);
+            if (session.IsReadOnly)
+                return Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_STATE_READ_ONLY);
+            if (session.IsDirty)
+                return Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_STATE_DIRTY);
+            return Localized(LocalizationCodes.LC_YOUR_PALS_SAVE_STATE_SAVED);
+        }
+
+        private static string BuildSessionStateText(SavePalsSession session) => session.State switch
+        {
+            SavePalsSessionState.Healthy => Localized(LocalizationCodes.LC_YOUR_PALS_SESSION_HEALTHY),
+            SavePalsSessionState.Dirty => Localized(LocalizationCodes.LC_YOUR_PALS_SESSION_DIRTY),
+            SavePalsSessionState.ReadOnly => Localized(LocalizationCodes.LC_YOUR_PALS_SESSION_READ_ONLY),
+            SavePalsSessionState.Recovery => Localized(LocalizationCodes.LC_YOUR_PALS_SESSION_RECOVERY),
+            SavePalsSessionState.SourceUnavailable => Localized(LocalizationCodes.LC_YOUR_PALS_SESSION_SOURCE_UNAVAILABLE),
+            SavePalsSessionState.ExternalConflict => Localized(LocalizationCodes.LC_YOUR_PALS_SESSION_EXTERNAL_CONFLICT),
+            SavePalsSessionState.WriteFailed => Localized(LocalizationCodes.LC_YOUR_PALS_SESSION_WRITE_FAILED),
+            SavePalsSessionState.Orphaned => Localized(LocalizationCodes.LC_YOUR_PALS_SESSION_ORPHANED),
+            _ => Localized(LocalizationCodes.LC_YOUR_PALS_SESSION_READ_ONLY),
+        };
 
         private static string BuildRecoveryGuidance(SavePalsSession session)
         {
             if (session.HasUnrecoverableRecoveryData)
             {
-                return "Repair is disabled because one or more whole records could not be recovered safely. The original file is preserved; use the backup or recover the missing records manually.";
+                return Localized(LocalizationCodes.LC_YOUR_PALS_RECOVERY_UNRECOVERABLE);
             }
 
             if (session.IsRecoveredFromBackup)
             {
-                return "A backup was loaded read-only. Use Repair recovered to restore the primary document. If repair fails, correct the file problem and retry; the backup remains preserved.";
+                return Localized(LocalizationCodes.LC_YOUR_PALS_RECOVERY_BACKUP);
             }
 
             if (session.CanRepairRecoveredDocument)
             {
-                return "Some document data needs repair. Review the recovery details, then use Repair recovered to write the repaired projection.";
+                return Localized(LocalizationCodes.LC_YOUR_PALS_RECOVERY_REPAIRABLE);
             }
 
             if (session.State == SavePalsSessionState.Recovery)
             {
-                return "This document is read-only because it could not be loaded safely. Review the recovery details; no empty replacement will be saved automatically.";
+                return Localized(LocalizationCodes.LC_YOUR_PALS_RECOVERY_READ_ONLY);
             }
 
             return "";
@@ -741,7 +1537,7 @@ namespace PalCalc.UI.ViewModel
             var selectedGroupId = queryState.SelectedGroupId;
             var options = new List<YourPalsGroupFilterOption>
             {
-                new(null, "All groups"),
+                new(null, Localized(LocalizationCodes.LC_YOUR_PALS_ALL_PALS)),
             };
             options.AddRange(Groups.Select(group => new YourPalsGroupFilterOption(
                 group.GroupId,
@@ -800,13 +1596,23 @@ namespace PalCalc.UI.ViewModel
                 .AsReadOnly();
             FilteredEntryCount = Entries.Count;
             OnPropertyChanged(nameof(EntryCountText));
+            OnPropertyChanged(nameof(ShowingText));
             HasEntries = Entries.Count > 0;
             SelectedEntry = Entries.FirstOrDefault(entry => entry.PalEntryKey == selectedKey);
+            OnPropertyChanged(nameof(CurrentCollectionEntryCount));
+            OnPropertyChanged(nameof(HasEmptyCollection));
+            OnPropertyChanged(nameof(HasNoQueryMatches));
+            OnPropertyChanged(nameof(HasTextOrStatusQuery));
+            OnPropertyChanged(nameof(HasSourceUnavailableCollectionState));
+            OnPropertyChanged(nameof(HasNoSourceEntriesCollectionState));
             OnPropertyChanged(nameof(HasActiveQuery));
         }
 
         private bool MatchesQuery(YourPalsEntryRowViewModel entry)
         {
+            if (IsAttentionReviewActive && entry.Status == YourPalsEntryStatus.Resolved)
+                return false;
+
             if (queryState.SelectedGroupId != null &&
                 !string.Equals(entry.GroupId, queryState.SelectedGroupId, StringComparison.Ordinal))
             {
@@ -827,7 +1633,12 @@ namespace PalCalc.UI.ViewModel
             var options = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
             return Contains(entry.GroupName, searchText, compareInfo, options) ||
                 Contains(entry.PalName, searchText, compareInfo, options) ||
-                Contains(entry.Status.ToString(), searchText, compareInfo, options) ||
+                Contains(entry.Nickname, searchText, compareInfo, options) ||
+                Contains(entry.Level, searchText, compareInfo, options) ||
+                Contains(entry.Gender, searchText, compareInfo, options) ||
+                Contains(entry.Location, searchText, compareInfo, options) ||
+                Contains(entry.StatusLabel, searchText, compareInfo, options) ||
+                Contains(entry.StatusExplanation, searchText, compareInfo, options) ||
                 Contains(entry.SourceScope, searchText, compareInfo, options) ||
                 Contains(entry.SourceKey, searchText, compareInfo, options) ||
                 Contains(entry.InstanceId, searchText, compareInfo, options) ||
@@ -868,7 +1679,7 @@ namespace PalCalc.UI.ViewModel
             }
         }
 
-        private bool CanSave() => Session?.CanEdit == true && Session.IsDirty;
+        private bool CanSave() => !IsSaving && Session?.CanEdit == true && Session.IsDirty;
 
         private bool CanCreateGroup() => CanEdit && !string.IsNullOrWhiteSpace(NewGroupName);
 
@@ -903,6 +1714,11 @@ namespace PalCalc.UI.ViewModel
 
         private bool CanRemoveDuplicateMembers() => CanEdit;
 
+        // Guarded on an available source: when the save cannot be read every
+        // imported member looks missing, and removing them would wipe the groups.
+        private bool CanRemoveMissingMembers() =>
+            CanEdit && Session?.IsSourceAvailable == true && HasMissingEntries;
+
         private bool CanRepairRecoveredDocumentCommand() => Session?.CanRepairRecoveredDocument == true;
 
         private bool CanDeleteSelectedOrphanedDocument() =>
@@ -933,6 +1749,8 @@ namespace PalCalc.UI.ViewModel
         private void NotifyEditingCommands()
         {
             CreateDocumentCommand.NotifyCanExecuteChanged();
+            ShowAllPalsCommand.NotifyCanExecuteChanged();
+            ReviewAttentionCommand.NotifyCanExecuteChanged();
             DiscardChangesAndReloadCommand.NotifyCanExecuteChanged();
             SaveCommand.NotifyCanExecuteChanged();
             CreateGroupCommand.NotifyCanExecuteChanged();
@@ -947,8 +1765,16 @@ namespace PalCalc.UI.ViewModel
             RebindSelectedEntryCommand.NotifyCanExecuteChanged();
             BulkRebindMatchingMembersCommand.NotifyCanExecuteChanged();
             RemoveDuplicateMembersCommand.NotifyCanExecuteChanged();
+            RemoveMissingMembersCommand.NotifyCanExecuteChanged();
             RepairRecoveredDocumentCommand.NotifyCanExecuteChanged();
             DeleteSelectedOrphanedDocumentCommand.NotifyCanExecuteChanged();
+            AddPalCommand.NotifyCanExecuteChanged();
+            AddSelectedPalCommand.NotifyCanExecuteChanged();
+            RepairSelectedEntryCommand.NotifyCanExecuteChanged();
+            RepairEntryCommand.NotifyCanExecuteChanged();
+            OpenManualEditorCommand.NotifyCanExecuteChanged();
+            EditSelectedManualCommand.NotifyCanExecuteChanged();
+            SaveManualEditorCommand.NotifyCanExecuteChanged();
         }
 
         partial void OnSelectedEntryChanged(YourPalsEntryRowViewModel value)
@@ -961,22 +1787,93 @@ namespace PalCalc.UI.ViewModel
                         value.Member.ManualDefinitionId,
                         StringComparison.Ordinal))?.RawInternalName ?? "";
             }
-            else if (value == null)
+            else
             {
                 ManualInternalName = "";
             }
 
+            IsDetailsOpen = value != null;
+            OnPropertyChanged(nameof(CanEditSelectedManual));
+            OnPropertyChanged(nameof(IsSelectedEntryProblem));
+            OnPropertyChanged(nameof(AttentionActionText));
+            OnPropertyChanged(nameof(AttentionActionTooltip));
+            OnPropertyChanged(nameof(RepairPickerTitle));
+            OnPropertyChanged(nameof(RepairPickerActionText));
+            OnPropertyChanged(nameof(PickerActionText));
+            NotifyEditingCommands();
+        }
+
+        partial void OnIsAttentionReviewActiveChanged(bool value)
+        {
+            OnPropertyChanged(nameof(SelectedCollectionTitle));
+            OnPropertyChanged(nameof(HasActiveQuery));
+            OnPropertyChanged(nameof(HasNoQueryMatches));
+            OnPropertyChanged(nameof(HasTextOrStatusQuery));
+            ApplyQuery();
+        }
+
+        partial void OnIsRepairModeChanged(bool value)
+        {
+            OnPropertyChanged(nameof(PickerContextText));
+            OnPropertyChanged(nameof(PickerActionText));
+        }
+
+        partial void OnIsSavingChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsSaveHealthy));
             NotifyEditingCommands();
         }
 
         partial void OnSelectedGroupSummaryChanged(YourPalsGroupSummaryViewModel value)
         {
             RenameGroupName = value?.Name ?? "";
+            if (!string.Equals(SelectedGroupId, value?.GroupId, StringComparison.Ordinal))
+                SelectedGroupId = value?.GroupId;
+            OnPropertyChanged(nameof(SelectedCollectionTitle));
+            OnPropertyChanged(nameof(IsAllPalsSelected));
+            OnPropertyChanged(nameof(CurrentCollectionEntryCount));
+            OnPropertyChanged(nameof(HasEmptyCollection));
+            OnPropertyChanged(nameof(HasNoQueryMatches));
+            SelectedAddGroup = Groups.FirstOrDefault(group =>
+                string.Equals(group.GroupId, value?.GroupId, StringComparison.Ordinal)) ?? Groups.FirstOrDefault();
+            UpdateAddPalOptions();
+            OnPropertyChanged(nameof(AddPalDestinationText));
+            OnPropertyChanged(nameof(PickerContextText));
             NotifyEditingCommands();
         }
 
         partial void OnSelectedSourceEntryChanged(YourPalsSourceRowViewModel value) =>
             NotifyEditingCommands();
+
+        partial void OnSelectedAddPalChanged(YourPalsAddPalOptionViewModel value) =>
+            AddSelectedPalCommand.NotifyCanExecuteChanged();
+
+        partial void OnSelectedAddGroupChanged(YourPalsGroupSummaryViewModel value)
+        {
+            UpdateAddPalOptions();
+            OnPropertyChanged(nameof(AddPalDestinationText));
+            OnPropertyChanged(nameof(PickerContextText));
+            AddSelectedPalCommand.NotifyCanExecuteChanged();
+            SaveManualEditorCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnAddPalSearchTextChanged(string value)
+        {
+            OnPropertyChanged(nameof(HasAddPalSearchText));
+            UpdateAddPalOptions();
+        }
+
+        partial void OnSelectedManualPalChanged(PalViewModel value) =>
+            SaveManualEditorCommand.NotifyCanExecuteChanged();
+
+        partial void OnManualLevelTextChanged(string value) =>
+            SaveManualEditorCommand.NotifyCanExecuteChanged();
+
+        partial void OnIsEditingManualPalChanged(bool value)
+        {
+            OnPropertyChanged(nameof(ManualEditorTitle));
+            OnPropertyChanged(nameof(ManualEditorActionText));
+        }
 
         partial void OnNewGroupNameChanged(string value) => NotifyEditingCommands();
 
@@ -1001,7 +1898,8 @@ namespace PalCalc.UI.ViewModel
         public bool HasActiveQuery =>
             !string.IsNullOrWhiteSpace(SearchText) ||
             SelectedStatusFilter != YourPalsStatusFilter.All ||
-            SelectedGroupId != null;
+            SelectedGroupId != null ||
+            IsAttentionReviewActive;
     }
 
     internal sealed record YourPalsStatusFilterOption(YourPalsStatusFilter Value, string Label);
@@ -1015,28 +1913,30 @@ namespace PalCalc.UI.ViewModel
         public YourPalsGroupSummaryViewModel(YourPalsResolvedGroup group)
         {
             GroupId = group?.Group?.GroupId ?? "(invalid)";
-            Name = string.IsNullOrWhiteSpace(group?.Group?.Name) ? "(unnamed group)" : group.Group.Name;
+            Name = string.IsNullOrWhiteSpace(group?.Group?.Name)
+                ? Localized(LocalizationCodes.LC_YOUR_PALS_UNNAMED_GROUP)
+                : group.Group.Name;
             MemberCount = group?.Members?.Count ?? 0;
-            StatusSummary = BuildStatusSummary(group?.Members);
+            AttentionCount = group?.Members?.Count(member => member.Status != YourPalsEntryStatus.Resolved) ?? 0;
+            AttentionText = AttentionCount == 0
+                ? ""
+                : Localized(
+                    LocalizationCodes.LC_YOUR_PALS_ATTENTION_COUNT,
+                    new { count = AttentionCount });
+            StatusSummary = AttentionText;
         }
 
         public string GroupId { get; }
         public string Name { get; }
         public int MemberCount { get; }
+        public string MemberCountText => $"{Localized(LocalizationCodes.LC_YOUR_PALS_MEMBERS)} {MemberCount}";
+        public int AttentionCount { get; }
+        public string AttentionText { get; }
         public string StatusSummary { get; }
 
-        private static string BuildStatusSummary(IReadOnlyList<YourPalsResolvedMember> members)
-        {
-            if (members == null || members.Count == 0)
-                return "Empty";
+        private static string Localized(LocalizationCodes code) => code.Bind().Value;
 
-            return string.Join(
-                ", ",
-                members
-                    .GroupBy(member => member.Status)
-                    .OrderBy(group => group.Key)
-                    .Select(group => $"{group.Key}: {group.Count()}"));
-        }
+        private static string Localized(LocalizationCodes code, object formatArgs) => code.Bind(formatArgs).Value;
     }
 
     internal sealed class YourPalsEntryRowViewModel
@@ -1047,19 +1947,37 @@ namespace PalCalc.UI.ViewModel
             YourPalsManualDefinition manualDefinition)
         {
             GroupId = group?.GroupId ?? "(invalid)";
-            GroupName = string.IsNullOrWhiteSpace(group?.Name) ? "(unnamed group)" : group.Name;
+            GroupName = string.IsNullOrWhiteSpace(group?.Name)
+                ? Localized(LocalizationCodes.LC_YOUR_PALS_UNNAMED_GROUP)
+                : group.Name;
             Member = resolved?.Member;
             Status = resolved?.Status ?? YourPalsEntryStatus.Invalid;
-            Details = resolved?.Reason ?? "The member could not be interpreted.";
-            PalEntryKey = resolved?.Member?.PalEntryKey ?? "(missing key)";
-            Kind = resolved?.Member?.Kind ?? "(missing kind)";
+            Details = resolved?.Reason ?? Localized(LocalizationCodes.LC_YOUR_PALS_MEMBER_UNINTERPRETED);
+            PalEntryKey = resolved?.Member?.PalEntryKey ?? Localized(LocalizationCodes.LC_YOUR_PALS_MISSING_KEY);
+            Kind = resolved?.Member?.Kind ?? Localized(LocalizationCodes.LC_YOUR_PALS_MISSING_KIND);
             InstanceId = resolved?.Member?.InstanceId ?? manualDefinition?.ManualDefinitionId ?? "—";
             PalName = DisplayName(resolved, manualDefinition);
+            var record = resolved?.SourceEntry?.Record ?? resolved?.ResolvedRecord;
+            Nickname = string.IsNullOrWhiteSpace(record?.NickName) ? "—" : record.NickName;
+            Level = record?.Level.ToString() ?? "—";
+            Gender = record == null ? "—" : record.Gender.Label().Value;
+            Icon = ResolveIcon(record?.Pal, resolved?.Member?.LastKnownInternalName);
             SourceScope = DisplaySourceScope(resolved);
             SourceKey = resolved?.SourceEntry?.SourceKey
                 ?? resolved?.Member?.SourceKey
                 ?? "—";
-            Location = (resolved?.SourceEntry?.Record ?? resolved?.ResolvedRecord)?.Location?.Type.ToString() ?? "—";
+            var location = resolved?.SourceEntry?.Record ?? resolved?.ResolvedRecord;
+            Location = location?.Location == null ? "—" : location.Location.Type.ShortLabel().Value;
+            SourceReferenceKey = resolved?.SourceEntry == null
+                ? ""
+                : YourPalsSourceRowViewModel.GetReferenceKey(resolved.SourceEntry);
+            ImportIdentityKey = resolved?.Member?.KnownKind == YourPalsMemberKind.ImportedReference &&
+                resolved.Member.SourceIdentity.HasValue &&
+                !string.IsNullOrWhiteSpace(resolved.Member.InstanceId)
+                ? YourPalsSourceRowViewModel.GetImportIdentityKey(
+                    resolved.Member.SourceIdentity.Value,
+                    resolved.Member.InstanceId)
+                : "";
         }
 
         public YourPalsMember Member { get; }
@@ -1068,12 +1986,64 @@ namespace PalCalc.UI.ViewModel
         public string PalEntryKey { get; }
         public string Kind { get; }
         public string PalName { get; }
+        public string Nickname { get; }
+        public string Level { get; }
+        public string Gender { get; }
+        public ImageSource Icon { get; }
         public string SourceScope { get; }
         public string SourceKey { get; }
         public string InstanceId { get; }
         public string Location { get; }
+        public string SourceReferenceKey { get; }
+        public string ImportIdentityKey { get; }
         public YourPalsEntryStatus Status { get; }
         public string Details { get; }
+
+        public string StatusLabel => Status switch
+        {
+            YourPalsEntryStatus.Resolved => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_READY),
+            YourPalsEntryStatus.Unresolved => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_CANNOT_IDENTIFY),
+            YourPalsEntryStatus.Stale => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_NO_LONGER_IN_SAVE),
+            YourPalsEntryStatus.Conflict => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_CONFLICTING_COPIES),
+            YourPalsEntryStatus.Invalid => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_NEEDS_REPAIR),
+            _ => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_NEEDS_REPAIR),
+        };
+
+        public string StatusExplanation => Status switch
+        {
+            YourPalsEntryStatus.Resolved => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_READY_EXPLANATION),
+            YourPalsEntryStatus.Unresolved => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_CANNOT_IDENTIFY_EXPLANATION),
+            YourPalsEntryStatus.Stale => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_NO_LONGER_IN_SAVE_EXPLANATION),
+            YourPalsEntryStatus.Conflict => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_CONFLICTING_COPIES_EXPLANATION),
+            YourPalsEntryStatus.Invalid => Localized(LocalizationCodes.LC_YOUR_PALS_STATUS_NEEDS_REPAIR_EXPLANATION),
+            _ => Details,
+        };
+
+        public string AttentionActionText => Status switch
+        {
+            YourPalsEntryStatus.Stale => Localized(LocalizationCodes.LC_YOUR_PALS_FIND_REPLACEMENT),
+            YourPalsEntryStatus.Conflict => Localized(LocalizationCodes.LC_YOUR_PALS_CHOOSE_COPY),
+            YourPalsEntryStatus.Unresolved or YourPalsEntryStatus.Invalid when
+                Member?.KnownKind == YourPalsMemberKind.ManualDefinitionReference =>
+                Localized(LocalizationCodes.LC_YOUR_PALS_EDIT_MANUAL_PAL),
+            YourPalsEntryStatus.Unresolved or YourPalsEntryStatus.Invalid when
+                Member?.KnownKind == YourPalsMemberKind.ImportedReference =>
+                Localized(LocalizationCodes.LC_YOUR_PALS_REVIEW),
+            _ => "",
+        };
+
+        private static string Localized(LocalizationCodes code) => code.Bind().Value;
+
+        // A member whose Pal has left the save has no live record, but the saved
+        // reference still remembers what it was. Showing that Pal's icon keeps the
+        // row identifiable while its status explains that it is missing.
+        private static ImageSource ResolveIcon(Pal pal, string lastKnownInternalName)
+        {
+            pal ??= YourPalsDisplayName.FindPalByInternalName(lastKnownInternalName);
+            return pal != null && PalIcon.Images.TryGetValue(pal, out var icon)
+                ? icon
+                : PalIcon.DefaultIcon;
+        }
 
         private static string DisplayName(
             YourPalsResolvedMember resolved,
@@ -1082,28 +2052,26 @@ namespace PalCalc.UI.ViewModel
             var record = resolved?.SourceEntry?.Record ?? resolved?.ResolvedRecord;
             if (record?.Pal != null)
             {
-                if (!string.IsNullOrWhiteSpace(record.NickName))
-                    return $"{record.NickName} ({YourPalsDisplayName.For(record.Pal)})";
-
                 return YourPalsDisplayName.For(record.Pal);
             }
 
             return manualDefinition?.RawInternalName
                 ?? resolved?.Member?.LastKnownDisplayName
                 ?? resolved?.Member?.LastKnownInternalName
-                ?? "Unknown Pal";
+                ?? Localized(LocalizationCodes.LC_YOUR_PALS_UNKNOWN_PAL);
         }
 
         private static string DisplaySourceScope(YourPalsResolvedMember resolved)
         {
             if (resolved?.ManualDefinition != null)
-                return "Manual definition";
+                return Localized(LocalizationCodes.LC_YOUR_PALS_MANUAL_DEFINITION);
 
             var sourceIdentity = resolved?.SourceEntry?.SourceIdentity;
             if (sourceIdentity.HasValue)
                 return sourceIdentity.Value.StableKey;
 
-            return resolved?.Member?.SourceIdentity?.StableKey ?? "Unavailable";
+            return resolved?.Member?.SourceIdentity?.StableKey
+                ?? Localized(LocalizationCodes.LC_YOUR_PALS_SOURCE_UNAVAILABLE_SHORT);
         }
     }
 
@@ -1114,40 +2082,95 @@ namespace PalCalc.UI.ViewModel
             Entry = entry;
             var record = entry?.Record;
             PalName = YourPalsDisplayName.For(record?.Pal);
+            Nickname = string.IsNullOrWhiteSpace(record?.NickName) ? "—" : record.NickName;
+            Icon = record?.Pal == null ? PalIcon.DefaultIcon : PalIcon.Images[record.Pal];
             InstanceId = entry?.InstanceId ?? "—";
-            SourceScope = entry?.SourceIdentity.StableKey ?? "Unavailable";
+            SourceScope = entry?.SourceIdentity.StableKey
+                ?? Localized(LocalizationCodes.LC_YOUR_PALS_SOURCE_UNAVAILABLE_SHORT);
             SourceKey = entry?.SourceKey ?? "—";
-            Location = record?.Location?.Type.ToString() ?? "—";
+            Location = record?.Location == null ? "—" : record.Location.Type.ShortLabel().Value;
             Level = record?.Level.ToString() ?? "—";
-            Gender = record?.Gender.ToString() ?? "—";
+            Gender = record == null ? "—" : record.Gender.Label().Value;
         }
 
         public YourPalsSourceEntry Entry { get; }
         public string PalName { get; }
+        public string Nickname { get; }
+        public ImageSource Icon { get; }
         public string InstanceId { get; }
         public string SourceScope { get; }
         public string SourceKey { get; }
         public string Location { get; }
         public string Level { get; }
         public string Gender { get; }
-        public string ReferenceKey => Entry == null
-            ? "Unavailable"
+        public string ReferenceKey => GetReferenceKey(Entry);
+        public string ImportIdentityKey => GetImportIdentityKey(Entry);
+
+        public static string GetImportIdentityKey(YourPalsSourceEntry entry) => entry == null
+            ? ""
+            : GetImportIdentityKey(entry.SourceIdentity, entry.InstanceId);
+
+        public static string GetImportIdentityKey(SourceIdentity sourceIdentity, string instanceId) =>
+            string.Concat(StablePart(sourceIdentity.StableKey), StablePart(instanceId));
+
+        public static string GetReferenceKey(YourPalsSourceEntry entry) => entry == null
+            ? Localized(LocalizationCodes.LC_YOUR_PALS_SOURCE_UNAVAILABLE_SHORT)
             : string.Concat(
-                StablePart(Entry.SourceIdentity.StableKey),
-                StablePart(Entry.InstanceId),
-                StablePart(Entry.SourceKey),
-                StablePart(Entry.ContentFingerprint));
+                StablePart(entry.SourceIdentity.StableKey),
+                StablePart(entry.InstanceId),
+                StablePart(entry.SourceKey),
+                StablePart(entry.ContentFingerprint));
+
+        private static string Localized(LocalizationCodes code) => code.Bind().Value;
 
         private static string StablePart(string value) =>
             $"{value?.Length ?? -1}:{value}";
     }
 
+    internal sealed class YourPalsAddPalOptionViewModel
+    {
+        public YourPalsAddPalOptionViewModel(YourPalsSourceRowViewModel source, bool isAlreadyInSelectedGroup)
+        {
+            Source = source;
+            IsAlreadyInSelectedGroup = isAlreadyInSelectedGroup;
+        }
+
+        public YourPalsSourceRowViewModel Source { get; }
+        public YourPalsSourceEntry SourceEntry => Source.Entry;
+        public string PalName => Source.PalName;
+        public string Nickname => Source.Nickname;
+        public string Level => Source.Level;
+        public string Gender => Source.Gender;
+        public string Location => Source.Location;
+        public ImageSource Icon => Source.Icon;
+        public bool IsAlreadyInSelectedGroup { get; }
+        public string AlreadyInGroupText => IsAlreadyInSelectedGroup ?
+            Localized(LocalizationCodes.LC_YOUR_PALS_ALREADY_IN_GROUP) : "";
+        public string ReferenceKey => Source.ReferenceKey;
+
+        private static string Localized(LocalizationCodes code) => code.Bind().Value;
+    }
+
     internal static class YourPalsDisplayName
     {
+        private static Dictionary<string, Pal> palsByInternalName;
+
+        internal static Pal FindPalByInternalName(string internalName)
+        {
+            if (string.IsNullOrWhiteSpace(internalName))
+                return null;
+
+            palsByInternalName ??= PalDB.LoadEmbedded().Pals
+                .GroupBy(pal => pal.InternalName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+            return palsByInternalName.GetValueOrDefault(internalName);
+        }
+
         public static string For(Pal pal)
         {
             if (pal == null)
-                return "Unknown Pal";
+                return Localized(LocalizationCodes.LC_YOUR_PALS_UNKNOWN_PAL);
 
             if (pal.LocalizedNames != null)
             {
@@ -1158,7 +2181,9 @@ namespace PalCalc.UI.ViewModel
                     return localizedName;
             }
 
-            return pal.Name ?? pal.InternalName ?? "Unknown Pal";
+            return pal.Name ?? pal.InternalName ?? Localized(LocalizationCodes.LC_YOUR_PALS_UNKNOWN_PAL);
         }
+
+        private static string Localized(LocalizationCodes code) => code.Bind().Value;
     }
 }

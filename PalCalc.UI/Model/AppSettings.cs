@@ -147,6 +147,9 @@ namespace PalCalc.UI.Model
 
         public UiLayoutSettings UiLayout { get; set; } = new();
 
+        // Per-save UI preference for the Your Pals source toggle.
+        public Dictionary<string, bool> YourPalsSolverSourceBySave { get; set; } = new();
+
         public string SkippedAppVersion { get; set; } = null;
     }
 }

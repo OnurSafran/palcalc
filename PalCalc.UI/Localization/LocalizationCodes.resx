@@ -778,6 +778,9 @@
   <data name="LC_CUSTOM_CONTAINERS_DESCRIPTION" xml:space="preserve">
     <value />
   </data>
+  <data name="LC_CUSTOMIZATIONS_READ_ONLY" xml:space="preserve">
+    <value />
+  </data>
   <data name="LC_CUSTOM_CONTAINER_ADD_NEW" xml:space="preserve">
     <value />
   </data>
@@ -1211,10 +1214,10 @@
     <value />
   </data>
   <data name="LC_BREEDING_MISSING_PARENT1" xml:space="preserve">
-    <value />
+    <value>Parent</value>
   </data>
   <data name="LC_BREEDING_MISSING_PARENT2" xml:space="preserve">
-    <value />
+    <value>Parent</value>
   </data>
   <data name="LC_BREEDING_MISSING_GENDER" xml:space="preserve">
     <value />
@@ -1233,5 +1236,527 @@
   </data>
   <data name="LC_LIBOOZ_VC_REDIST_BTN_MORE_INFO" xml:space="preserve">
     <value />
+  </data>
+  <data name="LC_YOUR_PALS_TITLE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SAVE_SCOPE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SESSION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SOURCE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_USE_AS_SOLVER_SOURCE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REFRESH" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DISCARD_RELOAD" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SEARCH_SAVED_MEMBERS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_CLEAR" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SHOWING" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NEW_GROUP_NAME" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_CREATE_GROUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SELECTED_GROUP_NAME" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MOVE_GROUP_UP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MOVE_GROUP_DOWN" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DELETE_GROUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MANUAL_INTERNAL_NAME" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ADD_MANUAL" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_UPDATE_MANUAL" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ADD_SOURCE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REBIND" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_RESOLVE_MATCHING" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REMOVE_DUPLICATES" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REMOVE_MEMBER" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_CREATE_DOCUMENT" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REPAIR_RECOVERED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_RECOVERY_DETAILS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ORPHANED_DOCUMENTS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REFRESH_ORPHANED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DELETE_SELECTED_ORPHAN" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_GROUPS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MEMBERS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SAVED_GROUP_MEMBERS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_SAVED_GROUP_MEMBERS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_CURRENT_SOURCE_SNAPSHOT" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_BACK_TO_SAVE_SELECTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DESCRIPTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_ORPHANED_DOCUMENTS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_OWNER" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REASON" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DOCUMENT" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_PAL" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SOURCE_COLUMN" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_INSTANCE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_KEY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DETAILS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_PURPOSE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ALL_PALS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_COLLECTION_SUMMARY" xml:space="preserve">
+    <value>pals|groups|attention</value>
+  </data>
+  <data name="LC_YOUR_PALS_SAVE_STATE_SAVED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SAVE_STATE_DIRTY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SAVE_STATE_SAVING" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SAVE_STATE_READ_ONLY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SAVE_STATE_FAILED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_SAVE_SELECTED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_GROUPS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_GROUPS_DESCRIPTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_EMPTY_COLLECTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_EMPTY_COLLECTION_DESCRIPTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_QUERY_MATCHES" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_QUERY_MATCHES_DESCRIPTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_SOURCE_ENTRIES" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SOURCE_UNAVAILABLE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_GROUP_ACTIONS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ADVANCED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MORE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SEARCH_THIS_GROUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ASCENDING" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DESCENDING" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ATTENTION_COUNT" xml:space="preserve">
+    <value>count</value>
+  </data>
+  <data name="LC_YOUR_PALS_UNNAMED_GROUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_UNKNOWN_PAL" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_ALL" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_READY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_CANNOT_IDENTIFY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_NO_LONGER_IN_SAVE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_CONFLICTING_COPIES" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_NEEDS_REPAIR" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_READY_EXPLANATION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_CANNOT_IDENTIFY_EXPLANATION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_NO_LONGER_IN_SAVE_EXPLANATION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_CONFLICTING_COPIES_EXPLANATION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_STATUS_NEEDS_REPAIR_EXPLANATION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ADD_PAL" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ADD_TO_GROUP" xml:space="preserve">
+    <value>group</value>
+  </data>
+  <data name="LC_YOUR_PALS_ADD_TO_SELECTED_GROUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SELECT_GROUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NEW_GROUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_RENAME_GROUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_GROUP_NAME" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DELETE_GROUP_CONFIRM" xml:space="preserve">
+    <value>group</value>
+  </data>
+  <data name="LC_YOUR_PALS_ADD_MANUAL_PAL" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_EDIT_MANUAL_PAL" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SAVE_MANUAL_PAL" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MANUAL_PAL" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NICKNAME" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MANUAL_HELP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MANUAL_EDITOR_INVALID" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SEARCH_SOURCE_PALS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_SOURCE_MATCHES" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ALREADY_IN_GROUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_PAL_DETAILS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_CLOSE_DETAILS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REMOVE_FROM_GROUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REMOVE_MEMBER_CONFIRM" xml:space="preserve">
+    <value>pal|group</value>
+  </data>
+  <data name="LC_YOUR_PALS_SOLVER_ELIGIBILITY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ADDED_TO_GROUP" xml:space="preserve">
+    <value>pal|group</value>
+  </data>
+  <data name="LC_YOUR_PALS_MANUAL_UPDATED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REVIEW_ATTENTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ATTENTION_VIEW" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REVIEW" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_FIND_REPLACEMENT" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_FIND_REPLACEMENT_DESCRIPTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_CHOOSE_COPY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_CHOOSE_COPY_DESCRIPTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_USE_SELECTED_COPY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_USE_REPLACEMENT" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REPLACE_IN_GROUP" xml:space="preserve">
+    <value>pal|group</value>
+  </data>
+  <data name="LC_YOUR_PALS_REBOUND_ENTRY" xml:space="preserve">
+    <value>pal</value>
+  </data>
+  <data name="LC_YOUR_PALS_SOLVER_CARD_TITLE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SOLVER_CARD_DESCRIPTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SOLVER_READY_COUNT" xml:space="preserve">
+    <value>count</value>
+  </data>
+  <data name="LC_YOUR_PALS_SOLVER_EXCLUDED_COUNT" xml:space="preserve">
+    <value>count</value>
+  </data>
+  <data name="LC_YOUR_PALS_SOLVER_INCLUDED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SOLVER_NOT_INCLUDED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SORT" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SORT_DIRECTION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_RESIZE_GROUPS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ORPHANED_DOCUMENT_COUNT" xml:space="preserve">
+    <value>count</value>
+  </data>
+  <data name="LC_YOUR_PALS_SOURCE_AVAILABLE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SOURCE_UNAVAILABLE_SHORT" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SESSION_HEALTHY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SESSION_DIRTY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SESSION_READ_ONLY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SESSION_RECOVERY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SESSION_SOURCE_UNAVAILABLE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SESSION_EXTERNAL_CONFLICT" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SESSION_WRITE_FAILED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SESSION_ORPHANED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DISCARDED_RELOADED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DOCUMENT_CREATED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SAVE_FAILED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_GROUP_CREATED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_GROUP_RENAMED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_GROUP_DELETED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_GROUP_ORDER_CHANGED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MEMBER_REMOVED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REBOUND_MATCHING" xml:space="preserve">
+    <value>count</value>
+  </data>
+  <data name="LC_YOUR_PALS_DUPLICATES_REMOVED" xml:space="preserve">
+    <value>count</value>
+  </data>
+  <data name="LC_YOUR_PALS_RECOVERED_SAVED" xml:space="preserve">
+    <value>count</value>
+  </data>
+  <data name="LC_YOUR_PALS_DELETE_ORPHAN_CONFIRM" xml:space="preserve">
+    <value>path</value>
+  </data>
+  <data name="LC_YOUR_PALS_DELETE_ORPHAN_TITLE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_ORPHAN_DELETED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_RECOVERY_UNRECOVERABLE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_RECOVERY_BACKUP" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_RECOVERY_REPAIRABLE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_RECOVERY_READ_ONLY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MEMBER_UNINTERPRETED" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MISSING_KEY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MISSING_KIND" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_MANUAL_DEFINITION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_RECOVERY_DETAILS" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_NO_SESSION" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DISCARD_CONFIRM" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_DISCARD_TITLE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_UNSAVED_NAVIGATION_CONFIRM" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_UNSAVED_NAVIGATION_TITLE" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SOLVER_SOURCE_EMPTY" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_SOLVER_MISSING_COUNT" xml:space="preserve">
+    <value>count</value>
+  </data>
+  <data name="LC_YOUR_PALS_REMOVE_MISSING" xml:space="preserve">
+    <value />
+  </data>
+  <data name="LC_YOUR_PALS_REMOVE_MISSING_CONFIRM" xml:space="preserve">
+    <value>count</value>
+  </data>
+  <data name="LC_YOUR_PALS_MISSING_REMOVED" xml:space="preserve">
+    <value>count</value>
+  </data>
+  <data name="LC_YOUR_PALS_DELETE_ORPHAN_UNVERIFIED_CONFIRM" xml:space="preserve">
+    <value>path</value>
   </data>
 </root>
